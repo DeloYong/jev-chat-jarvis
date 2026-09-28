@@ -6,7 +6,7 @@
 <title data-i18n="meta.title">Jev 聊天助手 — 回消息之前，先看懂对方｜Android / Windows / macOS</title>
 <meta name="description" content="Jev 聊天助手提供 Android、Windows、macOS 版本。读懂屏幕上的聊天，判断意图与风险，起草候选回复；填入后由你决定是否发送。安装包、教程和交流入口在 GitHub 项目主页。" data-i18n-attr="content:meta.desc">
 <link rel="canonical" href="https://chatjevs.com/">
-<link rel="alternate" hreflang="zh-CN" href="https://chatjevs.com/">
+<link rel="alternate" hreflang="zh-CN" href="https://chatjevs.com/?lang=zh">
 <link rel="alternate" hreflang="en" href="https://chatjevs.com/?lang=en">
 <link rel="alternate" hreflang="x-default" href="https://chatjevs.com/">
 <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
@@ -40,24 +40,27 @@
       var t = localStorage.getItem("jev-theme");
       if (t === "dark" || t === "light") d.setAttribute("data-theme", t);
     } catch (e) {}
-    try {
-      var q = /[?&]lang=(en|zh)\b/.exec(location.search);
-      var l = q ? q[1] : localStorage.getItem("jev-lang");
-      if (l === "en") {
-        d.setAttribute("lang", "en");
-        d.classList.add("i18n-pending");
-        setTimeout(function () { d.classList.remove("i18n-pending"); }, 1500);
-      }
-    } catch (e) {}
+    // 分享链接 > 手动选择 > 浏览器首选语言。仅手动切换时保存偏好。
+    var q = new URLSearchParams(location.search).get("lang");
+    var saved = null;
+    try { saved = localStorage.getItem("jev-lang"); } catch (e) {}
+    var preferred = (navigator.languages && navigator.languages[0]) || navigator.language || "zh";
+    var l = q === "zh" || q === "en" ? q :
+      (saved === "zh" || saved === "en" ? saved : (/^zh(?:-|$)/i.test(preferred) ? "zh" : "en"));
+    d.setAttribute("lang", l === "en" ? "en" : "zh-CN");
+    if (l === "en") {
+      d.classList.add("i18n-pending");
+      setTimeout(function () { d.classList.remove("i18n-pending"); }, 1500);
+    }
   })();
 </script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400..800&amp;display=swap" media="print" onload="this.media='all'">
 <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400..800&amp;display=swap"></noscript>
-<link rel="stylesheet" href="style.css?v=20260928b">
-<script defer src="i18n.js?v=20260928b"></script>
-<script defer src="main.js?v=20260928b"></script>
+<link rel="stylesheet" href="style.css?v=20260928c">
+<script defer src="i18n.js?v=20260928c"></script>
+<script defer src="main.js?v=20260928c"></script>
 <script defer src="https://umami.jisikeji.cn/script.js" data-website-id="e294ceb6-4001-47a0-a18b-d225cd09017a"></script>
 </head>
 <body>

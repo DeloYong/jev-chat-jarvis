@@ -158,3 +158,9 @@ node tools/check-i18n.mjs
 | 非侵入 | non-invasive | |
 | 知识库与关联上下文 | notes and contact context | 问答里也写 knowledge base，两种说法都指同一个功能 |
 | 姊妹项目 | sister projects | |
+
+## 首次访问语言
+
+首页按以下顺序决定语言：有效的 `?lang=zh` / `?lang=en` → 用户手动切换后保存在 `jev-lang` 的选择 → 浏览器首选语言（`zh` 及其地区变体显示简体中文，其余显示英文；浏览器不提供语言时回退中文）。自动识别和分享链接不写入长期偏好；手动切换才保存。存储不可用时仍可识别浏览器语言、使用语言链接和当页切换。
+
+公众号可以分享 `https://chatjevs.com/?lang=zh`，英文渠道可以分享 `https://chatjevs.com/?lang=en`。无参数链接自动适配。检测逻辑位于首页 head，main.js 复用其结果，避免首屏语言不一致。不依赖 IP、地区或来源网站。隐私政策仍保留中文全文与英文摘要；首页英文入口直达英文摘要。

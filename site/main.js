@@ -55,8 +55,8 @@
     onLang.forEach(function (fn) { fn(); });
   }
 
-  var q = /[?&]lang=(en|zh)\b/.exec(location.search);
-  var initial = I18N ? (q ? q[1] : (load(LANG_KEY) === "en" ? "en" : "zh")) : "zh";
+  // 首页 head 已决定语言；共用这次判定，确保首屏标记和正文一致。
+  var initial = I18N && root.getAttribute("lang") === "en" ? "en" : "zh";
 
   var langBtn = $("#langBtn");
   if (langBtn && I18N) {
@@ -65,8 +65,10 @@
       applyLang(next);
       save(LANG_KEY, next);
       track("toggle-lang", { to: next });
-      if (/[?&]lang=/.test(location.search) && window.history && history.replaceState) {
-        var url = location.pathname + location.search.replace(/([?&]lang=)(en|zh)/, "$1" + next) + location.hash;
+      var params = new URLSearchParams(location.search);
+      if (params.has("lang") && window.history && history.replaceState) {
+        params.set("lang", next);
+        var url = location.pathname + "?" + params.toString() + location.hash;
         history.replaceState(null, "", url);
       }
     });
