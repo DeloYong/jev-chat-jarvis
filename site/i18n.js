@@ -243,7 +243,7 @@ window.JEV_I18N = {
     "s3.p1": "无障碍服务",
     "s3.p2": "悬浮窗",
     "s3.p3": "自启动 + 省电无限制",
-    "start.star": "<a href='https://github.com/jev-chat/jev-chat-jarvis#快速开始' target='_blank' rel='noopener' data-umami-event='go-main-repo' data-umami-event-pos='start-tutorial' data-umami-event-intent='tutorial'>查看安装教程</a> · <a href='https://github.com/jev-chat/jev-chat-jarvis#交流群--需求收集' target='_blank' rel='noopener' data-umami-event='go-main-repo' data-umami-event-pos='start-community' data-umami-event-intent='community'>交流与更新：去项目主页查看</a>",
+    "start.star": "<a href='https://github.com/jev-chat/jev-chat-jarvis' target='_blank' rel='noopener' data-umami-event='go-main-repo' data-umami-event-pos='start-tutorial' data-umami-event-intent='tutorial'>查看安装教程</a> · <a href='https://github.com/jev-chat/jev-chat-jarvis' target='_blank' rel='noopener' data-umami-event='go-main-repo' data-umami-event-pos='start-community' data-umami-event-intent='community'>交流与更新：去项目主页查看</a>",
 
     "faq.kicker": "常见问题",
     "faq.title": "装之前，你可能想问",
@@ -258,7 +258,7 @@ window.JEV_I18N = {
     "faq.q5": "需要 root 吗？",
     "faq.a5": "不需要 root，也不用装任何模块。它是非侵入的：只读屏幕上正在显示的对话，不改任何 App 的安装包，不走它们的接口或账号。",
     "faq.q6": "支持 iOS 和电脑吗？",
-    "faq.a6": "暂不支持 iOS。Android、Windows、macOS 的获取入口都在<a href='https://github.com/jev-chat/jev-chat-jarvis#开始使用-jev' target='_blank' rel='noopener' data-umami-event='go-main-repo' data-umami-event-pos='faq' data-umami-event-intent='get'>GitHub 项目主页</a>；各平台独立维护。网页端还在规划中，目前没有网页版。",
+    "faq.a6": "暂不支持 iOS。Android、Windows、macOS 的获取入口都在<a href='https://github.com/jev-chat/jev-chat-jarvis' target='_blank' rel='noopener' data-umami-event='go-main-repo' data-umami-event-pos='faq' data-umami-event-intent='get'>GitHub 项目主页</a>；各平台独立维护。网页端还在规划中，目前没有网页版。",
     "faq.q7": "悬浮球不见了，或者读不到消息？",
     "faq.a7": "多半是国产 ROM 把后台冻结了。确认无障碍、悬浮窗、自启动、省电无限制四项都开着，小米 / HyperOS 尤其要开后两项；重装后悬浮窗权限会被重置，按主页向导再开一次。在聊天界面里随便点一下，通常就能恢复。",
     "faq.q8": "升级之后没反应？",
@@ -273,7 +273,7 @@ window.JEV_I18N = {
     "lim.6": "OCR 只认屏幕上看得见的部分，长消息被截断的地方读不到，偶尔有错字。",
     "lim.7": "知识库按标签或标题匹配，不做语义检索，笔记要打好标签才能被命中。",
     "lim.8": "安装包约 25 MB（含离线中文识别模型），只支持 arm64 机型。",
-    "faq.more": "没找到答案？<a href='https://github.com/jev-chat/jev-chat-jarvis/issues' target='_blank' rel='noopener' data-umami-event='click-issues' data-umami-event-pos='faq'>提一个 Issue</a>，或到<a href='https://github.com/jev-chat/jev-chat-jarvis#交流群--需求收集' target='_blank' rel='noopener' data-umami-event='go-main-repo' data-umami-event-pos='faq-community' data-umami-event-intent='community'>项目主页查看交流方式</a>。",
+    "faq.more": "没找到答案？<a href='https://github.com/jev-chat/jev-chat-jarvis/issues' target='_blank' rel='noopener' data-umami-event='click-issues' data-umami-event-pos='faq'>提一个 Issue</a>，或到<a href='https://github.com/jev-chat/jev-chat-jarvis' target='_blank' rel='noopener' data-umami-event='go-main-repo' data-umami-event-pos='faq-community' data-umami-event-intent='community'>项目主页查看交流方式</a>。",
 
     "contact.kicker": "联系与交流",
     "contact.title": "问题、建议、想接新 App，都可以来找",
@@ -545,7 +545,7 @@ window.JEV_I18N = {
     "s3.p1": "Accessibility service",
     "s3.p2": "Display over other apps",
     "s3.p3": "Autostart + unrestricted battery",
-    "start.star": "<a href='https://github.com/jev-chat/jev-chat-jarvis#%E5%BF%AB%E9%80%9F%E5%BC%80%E5%A7%8B' target='_blank' rel='noopener' data-umami-event='go-main-repo' data-umami-event-pos='start-tutorial' data-umami-event-intent='tutorial'>Setup guide</a> · <a href='https://github.com/jev-chat/jev-chat-jarvis#%E4%BA%A4%E6%B5%81%E7%BE%A4--%E9%9C%80%E6%B1%82%E6%94%B6%E9%9B%86' target='_blank' rel='noopener' data-umami-event='go-main-repo' data-umami-event-pos='start-community' data-umami-event-intent='community'>Community and updates on GitHub</a>",
+    "start.star": "<a href='https://github.com/jev-chat/jev-chat-jarvis' target='_blank' rel='noopener' data-umami-event='go-main-repo' data-umami-event-pos='start-tutorial' data-umami-event-intent='tutorial'>Setup guide</a> · <a href='https://github.com/jev-chat/jev-chat-jarvis' target='_blank' rel='noopener' data-umami-event='go-main-repo' data-umami-event-pos='start-community' data-umami-event-intent='community'>Community and updates on GitHub</a>",
 
     "faq.kicker": "FAQ",
     "faq.title": "Before you install",
@@ -560,7 +560,7 @@ window.JEV_I18N = {
     "faq.q5": "Do I need root?",
     "faq.a5": "No root and no modules. It is non-invasive: it only reads the conversation on screen, doesn't modify any app's package, and doesn't use their APIs or accounts.",
     "faq.q6": "iOS or desktop?",
-    "faq.a6": "No iOS for now. The <a href='https://github.com/jev-chat/jev-chat-jarvis#%E5%BC%80%E5%A7%8B%E4%BD%BF%E7%94%A8-jev' target='_blank' rel='noopener' data-umami-event='go-main-repo' data-umami-event-pos='faq' data-umami-event-intent='get'>GitHub project page</a> lists Android, Windows, and macOS; each platform is maintained independently. A web version is planned but doesn't exist yet.",
+    "faq.a6": "No iOS for now. The <a href='https://github.com/jev-chat/jev-chat-jarvis' target='_blank' rel='noopener' data-umami-event='go-main-repo' data-umami-event-pos='faq' data-umami-event-intent='get'>GitHub project page</a> lists Android, Windows, and macOS; each platform is maintained independently. A web version is planned but doesn't exist yet.",
     "faq.q7": "The bubble disappeared, or it can't read messages?",
     "faq.a7": "Usually the Android skin froze the app in the background. Check that accessibility, display over other apps, autostart and unrestricted battery are all on, especially the last two on Xiaomi / HyperOS. Reinstalling resets the overlay permission, so turn it on again from the home-screen guide. Tapping anywhere in the chat usually brings it back.",
     "faq.q8": "Nothing happens after an upgrade?",
@@ -575,7 +575,7 @@ window.JEV_I18N = {
     "lim.6": "OCR only sees what's on screen: cut-off parts of long messages are missed, and it sometimes misreads characters.",
     "lim.7": "Notes are matched by tag or title, not by meaning, so tag them well.",
     "lim.8": "The APK is about 25 MB (it bundles the offline Chinese OCR model) and runs on arm64 devices only.",
-    "faq.more": "Didn't find your answer? <a href='https://github.com/jev-chat/jev-chat-jarvis/issues' target='_blank' rel='noopener' data-umami-event='click-issues' data-umami-event-pos='faq'>Open an issue</a> or <a href='https://github.com/jev-chat/jev-chat-jarvis#%E4%BA%A4%E6%B5%81%E7%BE%A4--%E9%9C%80%E6%B1%82%E6%94%B6%E9%9B%86' target='_blank' rel='noopener' data-umami-event='go-main-repo' data-umami-event-pos='faq-community' data-umami-event-intent='community'>find community options on GitHub</a>.",
+    "faq.more": "Didn't find your answer? <a href='https://github.com/jev-chat/jev-chat-jarvis/issues' target='_blank' rel='noopener' data-umami-event='click-issues' data-umami-event-pos='faq'>Open an issue</a> or <a href='https://github.com/jev-chat/jev-chat-jarvis' target='_blank' rel='noopener' data-umami-event='go-main-repo' data-umami-event-pos='faq-community' data-umami-event-intent='community'>find community options on GitHub</a>.",
 
     "contact.kicker": "Contact",
     "contact.title": "Questions, ideas, or an app you want supported",

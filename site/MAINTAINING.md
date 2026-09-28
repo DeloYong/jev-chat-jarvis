@@ -77,7 +77,7 @@ grep -n 'src="/\|href="/' index.html privacy.html   # 本地资源必须是相�
 
 **缓存版本号**：改了 `style.css`、`main.js`、`i18n.js` 任意一个，把 `index.html` 和 `privacy.html` 里的资源查询参数一起改成新的日期与字母，否则回访用户会拿到旧文件。
 
-**入口规则**：所有产品获取按钮的静态 `href` 指向 `https://github.com/jev-chat/jev-chat-jarvis#开始使用-jev`；Android、Windows、macOS 卡片同级显示。安装教程指向 `#快速开始`，交流与更新指向 `#交流群--需求收集`。这些锚点由主仓库 README 标题生成，改标题时须同步检查。隐私政策、许可、Issue 和更新日志按自身用途保留原链接。不要恢复 `data-jev-apk`、`download-apk` 或跨域 APK 改写脚本。
+**入口规则**：所有产品获取、安装教程、交流与更新入口的静态 `href` 统一指向 `https://github.com/jev-chat/jev-chat-jarvis`，不带 README 章节锚点；用户先进入仓库首页，再在 GitHub 内分流。Android、Windows、macOS 卡片同级显示。隐私政策、许可、Issue 和更新日志按自身用途保留原链接。不要恢复 `data-jev-apk`、`download-apk` 或跨域 APK 改写脚本。
 ## 隐私政策（privacy.html）
 
 - 正文来自 App 仓库的 `PRIVACY.md`，App 设置页「隐私政策」按钮直链 `https://chatjevs.com/privacy.html`，**路径不能变**。
@@ -129,7 +129,7 @@ python -m http.server 8821 --bind 127.0.0.1
 node tools/check-i18n.mjs
 ```
 
-上线前至少看：1440 宽和 375 宽、浅色和深色、中文和英文；375 宽下 `document.documentElement.scrollWidth` 应当等于 375；控制台没有报错；关掉 JS、打开「减弱动态效果」时内容完整可见（演示停在收尾状态）；手机首屏能看到 GitHub 获取按钮，三端卡片均直接展开且同级。再核对 README 标题锚点以及 Umami 是否收到新事件。
+上线前至少看：1440 宽和 375 宽、浅色和深色、中文和英文；375 宽下 `document.documentElement.scrollWidth` 应当等于 375；控制台没有报错；关掉 JS、打开「减弱动态效果」时内容完整可见（演示停在收尾状态）；手机首屏能看到 GitHub 获取按钮，三端卡片均直接展开且同级。再核对导流入口均直达仓库首页且不带章节锚点，以及 Umami 是否收到新事件。
 
 ## 英文用词
 
