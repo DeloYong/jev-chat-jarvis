@@ -8,12 +8,12 @@ chatjevs.com 是纯静态站：GitHub Pages 从 `jev-chat/jev-chat.github.io` �
 |---|---|
 | `index.html` | 首页结构。默认内容是中文，每段文案用 `data-i18n` 键对应字典 |
 | `i18n.js` | **首页文案的单一来源**：`zh`、`en` 两个字典 |
-| `main.js` | 行为：中英切换、主题、导航、复制、APK 链接、首屏演示、进场动效、Star 数。首页和隐私页共用 |
+| `main.js` | 行为：中英切换、主题、导航、复制、首屏演示、进场动效、Star 数。首页和隐私页共用 |
 | `style.css` | 样式。设计令牌在文件开头，浅色 / 深色两套；隐私页样式在文件末尾 |
 | `privacy.html` | 隐私政策。**只有中文**，不走字典；页底有英文摘要 `#en-summary` |
 | `tools/check-i18n.mjs` | 中英文案检查；`--fix` 把中文从字典写进 `index.html` |
 | `assets/` | `favicon.svg`、`apple-touch-icon.png`、`og.png`（1200×630）、`mp-qr.webp`（公众号二维码）（旧版截图 `overlay.webp`、`settings.webp` 已删除，见 DESIGN.md 决策 1） |
-| `download/` | 站内 APK。**文件名不要改**，App、README、外部文章可能直链 |
+| `download/` | 历史 APK。**文件名不要改或删除**，App、README、外部文章可能直链；官网页面不再提供直下入口 |
 | `CNAME`、`.nojekyll` | 域名 chatjevs.com 和关闭 Jekyll，**不要删** |
 | `DESIGN.md` | 设计说明：信息架构、视觉语言、为什么这么做、旧版内容去向 |
 
@@ -67,31 +67,17 @@ grep -n 'src="/\|href="/' index.html privacy.html   # 本地资源必须是相�
 | 悬浮窗样式变化 | `style.css` 里「悬浮窗」一段（`.jp*`），颜色、字号照源码 |
 | 隐私政策改版 | 见下文「隐私政策」 |
 
-## 升版本号 / 换 APK
+## 版本号与产品获取入口
 
-**安卓新版本**（比如 v1.5）：
+**安卓新版本**：以主仓库已发布的 Release 为准更新 `index.html` 中三端卡片的 Android 版本、05 节 adb 文件名、收尾版本行和 JSON-LD `softwareVersion`；如包体大小变化，更新 `lim.8` 中英文案。下载文件及入口在主仓库 README 和 Release 维护，官网获取链接仍指向主仓库三端区。旧 `download/` 文件继续保留供既有外链使用。
 
-1. 把新 APK 放进 `download/`，文件名照旧规则：`jev-assistant-v1.5-release.apk`。旧包是否保留由作者定（保留可以避免旧链接 404）。
-2. 替换两个页面里所有的 `1.4`：
+**Windows / macOS 新版本**：确认正式发布页后，更新 05 节对应卡片和收尾版本行。官网仍只指向主仓库三端区，不直接分流到桌面仓库。
 
-   ```bash
-   grep -n 'v1\.4\|1\.4-release\|"1\.4"' index.html privacy.html     # 先看一眼，应该都是版本号
-   sed -i 's/jev-assistant-v1\.4-release/jev-assistant-v1.5-release/g; s/>v1\.4</>v1.5</g; s/"softwareVersion":"1\.4"/"softwareVersion":"1.5"/; s/下载 APK v1\.4/下载 APK v1.5/g; s/Android <span>v1\.4/Android <span>v1.5/' index.html privacy.html
-   grep -n 'v1\.4\|1\.4-release\|"1\.4"' index.html privacy.html     # 应当没有输出
-   ```
+**Star 兜底值**：`<b data-jev-stars>` 位于三端卡片后的支持提示。页面会实时拉 GitHub，拉不到才显示这个值；隔段时间按实际数更新静态兜底值。访客浏览器缓存 30 分钟（`localStorage` 的 `jev-gh`）。
 
-   涉及的位置：所有 `data-jev-apk` 链接、按钮里的 `.btn-ver`、04 节 Android 的 `.ver`、05 节的 adb 命令、收尾色带版本行、JSON-LD 的 `softwareVersion`、页脚「下载 APK v1.4」。
-3. 包体大小变了就改 `hero.meta` 和 `lim.8`（中英各一处）。
-4. 有新功能、新限制，按上一节改。
+**缓存版本号**：改了 `style.css`、`main.js`、`i18n.js` 任意一个，把 `index.html` 和 `privacy.html` 里的资源查询参数一起改成新的日期与字母，否则回访用户会拿到旧文件。
 
-**Windows / macOS 新版本**：`grep -n "0\.1\.11\|0\.6\.0" index.html`，改 04 节两张卡和收尾色带版本行。描述照线上现有写法，不照搬它们 README 里的平台名。
-
-**Star 兜底值**：`<b data-jev-stars>`（首页导航、首屏、收尾三处，隐私页导航一处）。页面会实时拉 GitHub，拉不到才显示这个值；隔段时间改成当时的真实数（千位保留一位小数，如 6.7k）。访客浏览器缓存 30 分钟（`localStorage` 的 `jev-gh`）。
-
-**缓存版本号**：改了 `style.css`、`main.js`、`i18n.js` 任意一个，把 `index.html` 和 `privacy.html` 里的 `?v=20260927r` 一起改成新的（日期 + 字母），否则回访用户会拿到旧文件。
-
-**APK 链接的规则**：页面里写站内相对路径 `download/…apk`。`main.js` 第 4 段发现页面不在 chatjevs.com、localhost、127.0.0.1 上（比如 `jev-chat-jarvis` 仓库的 `site/` 或 gh-pages 拷贝），会把链接换成 `https://github.com/jev-chat/jev-chat-jarvis/raw/main/apk/<同名文件>`。所以 App 仓库 `apk/` 目录里要有同名文件。
-
+**入口规则**：所有产品获取按钮的静态 `href` 指向 `https://github.com/jev-chat/jev-chat-jarvis#开始使用-jev`；Android、Windows、macOS 卡片同级显示。安装教程指向 `#快速开始`，交流与更新指向 `#交流群--需求收集`。这些锚点由主仓库 README 标题生成，改标题时须同步检查。隐私政策、许可、Issue 和更新日志按自身用途保留原链接。不要恢复 `data-jev-apk`、`download-apk` 或跨域 APK 改写脚本。
 ## 隐私政策（privacy.html）
 
 - 正文来自 App 仓库的 `PRIVACY.md`，App 设置页「隐私政策」按钮直链 `https://chatjevs.com/privacy.html`，**路径不能变**。
@@ -117,18 +103,17 @@ grep -n 'src="/\|href="/' index.html privacy.html   # 本地资源必须是相�
 
 | 事件 | 触发 | 附带属性 |
 |---|---|---|
-| `download-apk` | 点任一下载 APK | `pos`：nav / hero / apps / start / closing / footer / privacy-nav / privacy-footer |
-| `click-star` | 点 Star 按钮或 Star 引导 | `pos`：nav / hero / start / closing / privacy-nav |
-| `click-github` | 点页脚 GitHub、更新日志 | `pos`：footer / footer-changelog / privacy-footer / privacy-footer-changelog |
-| `click-issues` | 点提 Issue | `pos`：start / faq / contact / footer / privacy-footer |
-| `click-readme` | 点 README、交流群 | `pos`：contact / footer / footer-group / privacy-footer / privacy-footer-group |
+| `go-main-repo` | 点主仓库获取、教程或交流入口 | `pos`：入口位置；`intent`：get / android / windows / macos / tutorial / community。改版前的 `download-apk` 和 `click-star` 保留历史含义，不与新事件直接比较 |
+| `click-github` | 点更新日志 | `pos`：footer-changelog / privacy-footer-changelog |
+| `click-issues` | 点提 Issue | `pos`：faq / contact / footer / privacy-footer |
 | `view-privacy` | 点隐私政策 | `pos`：privacy / faq / footer / footer-legal |
-| `click-sister` | 点 Windows / macOS 姊妹项目 | `project`：windows / macos / windows-src / macos-src；`pos`：hero / apps / faq / footer / privacy-footer |
 | `copy-adb` | 点复制 adb 命令 | — |
 | `toggle-lang` | 点 中 / EN | `to`：zh / en |
 | `toggle-theme` | 点深浅色 | `to`：light / dark |
 | `demo-control` | 首屏演示暂停、播放、点某一步 | `action`：pause / play / step-1…step-4 |
 | `privacy-en-summary` | 隐私页顶栏点 English | — |
+
+`go-main-repo` 只代表从官网点击进入主仓库，不代表实际 Star、下载或安装。Star 增长要另看仓库每日净增，并记录推广和流量来源变化。
 
 注意：Umami 对站内链接（不是 `target="_blank"`）会先拦下点击、上报完再跳转。首屏演示的步骤按钮是 `<button>`，不受影响。
 
@@ -144,7 +129,7 @@ python -m http.server 8821 --bind 127.0.0.1
 node tools/check-i18n.mjs
 ```
 
-上线前至少看：1440 宽和 375 宽、浅色和深色、中文和英文；375 宽下 `document.documentElement.scrollWidth` 应当等于 375；控制台没有报错；关掉 JS、打开「减弱动态效果」时内容完整可见（演示停在收尾状态）；手机首屏能看到下载按钮。
+上线前至少看：1440 宽和 375 宽、浅色和深色、中文和英文；375 宽下 `document.documentElement.scrollWidth` 应当等于 375；控制台没有报错；关掉 JS、打开「减弱动态效果」时内容完整可见（演示停在收尾状态）；手机首屏能看到 GitHub 获取按钮，三端卡片均直接展开且同级。再核对 README 标题锚点以及 Umami 是否收到新事件。
 
 ## 英文用词
 

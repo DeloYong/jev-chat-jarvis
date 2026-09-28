@@ -531,7 +531,6 @@ html.anim .rv.in { opacity: 1; transform: none; }
 
 /* ---------- 04 支持的 App ---------- */
 .apps-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 22px; align-items: start; }
-@media (min-width: 980px) { .apps-grid { grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); gap: 26px; } }
 .apps-main { padding: 22px 22px 10px; border-radius: var(--r-lg); background: var(--card); border: 1px solid var(--line); box-shadow: var(--shadow-sm); }
 .apps-top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
 .plat { display: flex; align-items: center; gap: 8px; margin: 0; font-size: 19px; line-height: 1.4; }
@@ -551,13 +550,15 @@ html.anim .rv.in { opacity: 1; transform: none; }
 .state.plan::before { background: transparent; border: 1.5px dashed var(--ink-3); }
 .state.no::before { background: var(--line-2); }
 .state.plan, .state.no { color: var(--ink-3); }
-.apps-desk h3 { margin: 4px 0 6px; font-size: 19px; font-weight: 800; }
-.desk-lead { margin: 0 0 14px; font-size: 14.5px; color: var(--ink-2); }
-.sis { margin-top: 12px; padding: 18px 20px; border-radius: var(--r); background: var(--card); border: 1px solid var(--line); }
-.sis .plat { font-size: 17px; margin-bottom: 6px; }
-.sis p { margin: 0; font-size: 14.5px; line-height: 1.65; color: var(--ink-2); }
-.sis .req { margin-top: 6px; font-size: 12.5px; font-weight: 700; color: var(--ink-3); }
-.sis-links { display: flex; flex-wrap: wrap; gap: 6px 20px; margin-top: 10px !important; }
+.platform-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 18px; }
+@media (min-width: 900px) { .platform-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+.platform-card { display: flex; flex-direction: column; gap: 12px; min-width: 0; padding: 24px; border-radius: var(--r-lg); background: var(--card); border: 1px solid var(--line); box-shadow: var(--shadow-sm); }
+.platform-card .plat { margin: 0; }
+.platform-card p:not(.plat) { margin: 0; line-height: 1.65; color: var(--ink-2); }
+.platform-card .req { font-size: 13px; font-weight: 700; color: var(--ink-3) !important; }
+.platform-card .btn { align-self: flex-start; margin-top: auto; white-space: normal; height: auto; min-height: 46px; padding-top: 10px; padding-bottom: 10px; }
+.platform-star { margin: 22px 0 34px; text-align: center; font-size: 14.5px; color: var(--ink-2); }
+.install-title { margin: 0 0 18px; font-size: 22px; }
 
 /* ---------- 05 开始使用 ---------- */
 .steps { display: grid; grid-template-columns: minmax(0, 1fr); gap: 18px; margin: 0; padding: 0; list-style: none; }
@@ -618,8 +619,7 @@ details[open] > summary .acc { border-color: var(--blue); color: var(--blue-ink)
 
 /* ---------- 联系 ---------- */
 .contact-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
-@media (min-width: 720px) { .contact-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } .cc-mp { grid-column: 1 / -1; } }
-@media (min-width: 1080px) { .contact-grid { grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr) minmax(0, 1fr); } .cc-mp { grid-column: auto; } }
+@media (min-width: 720px) { .contact-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 .cc { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; padding: 24px; border-radius: var(--r-lg); background: var(--card); border: 1px solid var(--line); }
 .cc h3 { margin: 0; font-size: 18px; font-weight: 800; }
 .cc p { margin: 0; font-size: 14.5px; line-height: 1.7; color: var(--ink-2); }
