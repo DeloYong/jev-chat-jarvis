@@ -29,3 +29,10 @@ Project publisher: Finderchangchang . Find packages, platform documentation and 
 - Android chat text is sent to the model endpoint configured by the user; local OCR does not make the whole application offline.
 - Android features and permissions must not be assumed to apply to desktop versions.
 - iOS is not supported; a browser version is not currently available.
+
+## Practical guides
+
+- [Jev 聊天助手安装与设置：从选择平台到第一条候选回复](https://chatjevs.com/guides/android-setup.html): 先确认设备，再配置模型接口与读屏权限。本文说明 Android 的设置顺序、桌面版入口、费用和聊天数据去向。
+- [Set up Jev Chat Assistant: choose a platform and generate your first reply options](https://chatjevs.com/guides/android-setup.en.html): A practical Android setup guide covering model endpoints, accessibility, overlay permissions, costs and where chat data goes. Desktop editions have separate instructions.
+- [AI 给出的回复怎么用？发送前检查这四件事](https://chatjevs.com/guides/review-ai-replies.html): 用一个明确标注为虚构的对话示例，说明怎样核对事实、减少误读、检查承诺，并把 AI 候选改成自己愿意发送的话。
+- [How to review an AI-written reply before sending it](https://chatjevs.com/guides/review-ai-replies.en.html): Use a clearly fictional conversation to check captured text, uncertain interpretations, invented facts and commitments before turning an AI candidate into your own message.

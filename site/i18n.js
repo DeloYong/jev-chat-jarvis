@@ -7,6 +7,16 @@
  */
 window.JEV_I18N = {
   "zh": {
+    "learn.title": "从这里开始用",
+    "learn.intro": "把安装步骤和使用方法写清楚，遇到问题可以直接回来查。",
+    "learn.1.title": "Jev 聊天助手安装与设置：从选择平台到第一条候选回复",
+    "learn.1.desc": "先确认设备，再配置模型接口与读屏权限。本文说明 Android 的设置顺序、桌面版入口、费用和聊天数据去向。",
+    "learn.1.url": "guides/android-setup.html",
+    "learn.2.title": "AI 给出的回复怎么用？发送前检查这四件事",
+    "learn.2.desc": "用一个明确标注为虚构的对话示例，说明怎样核对事实、减少误读、检查承诺，并把 AI 候选改成自己愿意发送的话。",
+    "learn.2.url": "guides/review-ai-replies.html",
+    "learn.sister": "同一作者的开源项目：<a href='https://brewreel.com/?lang=zh' data-umami-event='click-sister' data-umami-event-project='brewreel'>精酿 BrewReel · AI 辅助宣传片制作</a>。",
+
     "facts.title": "Jev 聊天助手是什么？",
     "facts.desc": "Jev 聊天助手（Jev Chat Assistant）是开源的 AI 聊天辅助工具，提供 Android、Windows 和 macOS 版本。它帮助你分析消息、理解意图并起草候选回复，发送前由你检查和决定。",
     "facts.use.label": "适合什么需求",
@@ -320,6 +330,16 @@ window.JEV_I18N = {
   },
 
   "en": {
+    "learn.title": "Practical guides",
+    "learn.intro": "Setup steps and examples you can refer to when using the project.",
+    "learn.1.title": "Set up Jev Chat Assistant: choose a platform and generate your first reply options",
+    "learn.1.desc": "A practical Android setup guide covering model endpoints, accessibility, overlay permissions, costs and where chat data goes. Desktop editions have separate instructions.",
+    "learn.1.url": "guides/android-setup.en.html",
+    "learn.2.title": "How to review an AI-written reply before sending it",
+    "learn.2.desc": "Use a clearly fictional conversation to check captured text, uncertain interpretations, invented facts and commitments before turning an AI candidate into your own message.",
+    "learn.2.url": "guides/review-ai-replies.en.html",
+    "learn.sister": "Another open-source project by the author: <a href='https://brewreel.com/en.html' data-umami-event='click-sister' data-umami-event-project='brewreel'>BrewReel — AI-assisted promo video production</a>.",
+
     "facts.title": "What is Jev Chat Assistant?",
     "facts.desc": "Jev Chat Assistant is an open-source AI chat companion with Android, Windows and macOS versions. It helps you analyze messages, interpret intent and draft reply options. You review the wording and decide whether to send.",
     "facts.use.label": "Who it is for",

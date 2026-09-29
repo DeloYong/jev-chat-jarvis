@@ -181,6 +181,8 @@ node tools/check-i18n.mjs
 
 ```bash
 node tools/check-i18n.mjs --fix
+node tools/build-guides.mjs
+node tools/build-guides.mjs --check
 node tools/build-discovery.mjs
 node tools/build-discovery.mjs --check
 node --check main.js
@@ -192,3 +194,14 @@ git diff --check
 效果验证：在已有的 Search Console / Bing Webmaster Tools 中提交 sitemap，查看实际抓取/索引与 AI 搜索表现；Umami 的 AI 来源访问与 GitHub 入口点击只说明访问和点击，不能当作被 AI 推荐的次数或下载数。不要为了提交 sitemap 采用已废弃的匿名 ping 接口。账号验证与后续表现以平台真实记录为准。
 
 依据：[Google AI 搜索指南](https://developers.google.com/search/docs/fundamentals/ai-optimization-guide)、[OpenAI 爬虫说明](https://developers.openai.com/api/docs/bots)、[Perplexity 爬虫说明](https://docs.perplexity.ai/docs/resources/perplexity-crawlers)。
+
+
+## 教程与主动通知收录
+
+`content/guides.json` 保存中英文教程正文、来源和真实发布日期；`tools/build-guides.mjs` 生成 `guides/*.html`。更新正文时同步中英文，并更新对应文章的 updated 日期。不要改动日期来制造内容新鲜度。
+
+生成命令为 `node tools/build-guides.mjs`，检查用 `--check`。教程由首页「从这里开始用」链接，并由 build-discovery 加入 sitemap 和 llms.txt。`guide.css` 是教程样式。BrewReel 的可下载 Markdown 位于 downloads/。
+
+`indexnow-key.txt` 是 IndexNow 协议要求放在网站公开根目录的所有权证明，不能用真实 API 密钥替代。上线后先跑 `node tools/submit-indexnow.mjs` 预览 URL；带 `--submit` 才会验证线上证明文件与页面，再向 IndexNow 提交本站 sitemap 中的 URL。200 表示收到通知，202 表示收到且待验证；两者都不代表页面已经收录。仅在发布实质修改后提交，不定时重复刷提交。
+
+教程访问记为 read-guide，BrewReel 模板下载点击记为 download-brief-template / download-brief-example；这些是点击事件，不是下载完成、安装或转化。教程进入 GitHub 的事件保留现有事件名与独立位置属性。

@@ -15,6 +15,8 @@ const jev = host === 'chatjevs.com';
 const repo = jev ? 'https://github.com/jev-chat/jev-chat-jarvis' : 'https://github.com/Finderchangchang/brewreel';
 const text = (s) => s.replace(/<[^>]*>/g, ' ').replace(/&amp;/g, '&').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
 const output = new Map();
+const guidePath = join(root, 'content/guides.json');
+const guides = existsSync(guidePath) ? JSON.parse(readFileSync(guidePath, 'utf8')).articles : [];
 
 function translated(html, lang) {
   const { inner, attrs } = scan(html);
@@ -71,7 +73,12 @@ for (const lang of ['zh', 'en']) {
 }
 
 const alternates = `<xhtml:link rel="alternate" hreflang="zh-CN" href="${base}"/><xhtml:link rel="alternate" hreflang="en" href="${base}en.html"/><xhtml:link rel="alternate" hreflang="x-default" href="${base}"/>`;
-output.set('sitemap.xml', `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">\n  <url><loc>${base}</loc>${alternates}</url>\n  <url><loc>${base}en.html</loc>${alternates}</url>\n${jev ? `  <url><loc>${base}privacy.html</loc></url>\n` : ''}</urlset>\n`);
+const guideUrls = guides.map(article => {
+  const zh = `${base}guides/${article.slug}.html`, en = `${base}guides/${article.slug}.en.html`;
+  const links = `<xhtml:link rel="alternate" hreflang="zh-CN" href="${zh}"/><xhtml:link rel="alternate" hreflang="en" href="${en}"/><xhtml:link rel="alternate" hreflang="x-default" href="${zh}"/>`;
+  return [zh,en].map(url=>`  <url><loc>${url}</loc><lastmod>${article.updated}</lastmod>${links}</url>\n`).join('');
+}).join('');
+output.set('sitemap.xml', `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">\n  <url><loc>${base}</loc>${alternates}</url>\n  <url><loc>${base}en.html</loc>${alternates}</url>\n${jev ? `  <url><loc>${base}privacy.html</loc></url>\n` : ''}${guideUrls}</urlset>\n`);
 output.set('robots.txt', `# Public website content is crawlable.\nUser-agent: *\nAllow: /\n\n# Search discovery (these are not training-specific permissions).\nUser-agent: OAI-SearchBot\nAllow: /\n\nUser-agent: PerplexityBot\nAllow: /\n\nSitemap: ${base}sitemap.xml\n`);
 
 // A convenience index for readers/tools that use it, not a ranking directive.
@@ -82,6 +89,13 @@ facts += '\n## Product facts\n\n';
 for (const key of ['use', 'scope', 'cost']) facts += `- ${DICT.en[`facts.${key}.label`]}: ${text(DICT.en[`facts.${key}`])}\n- ${DICT.zh[`facts.${key}.label`]}：${text(DICT.zh[`facts.${key}`])}\n`;
 facts += `\n${text(DICT.en['facts.source'])}\n\n## Read before use\n\n`;
 facts += jev ? `- Reply sending remains a user decision. Model assessments are uncertain.\n- Android chat text is sent to the model endpoint configured by the user; local OCR does not make the whole application offline.\n- Android features and permissions must not be assumed to apply to desktop versions.\n- iOS is not supported; a browser version is not currently available.\n` : `- A language model writes the storyboard; rendering is performed locally with code.\n- Generated videos are drafts that need human review before publication.\n- Model and voiceover API calls may incur separate provider fees.\n- The DeepSeek Harness plugin is published, but the project documentation still marks real DeepSeek-model testing as pending.\n- MiniMax voiceover has been tested; Alibaba Cloud and Volcengine voiceover still need live-key verification.\n`;
+if (guides.length) {
+  facts += '\n## Practical guides\n\n';
+  for (const article of guides) {
+    facts += `- [${article.zh.title}](${base}guides/${article.slug}.html): ${article.zh.description}\n`;
+    facts += `- [${article.en.title}](${base}guides/${article.slug}.en.html): ${article.en.description}\n`;
+  }
+}
 output.set('llms.txt', facts);
 
 let stale = 0;
