@@ -3,11 +3,12 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title data-i18n="meta.title">Jev 聊天助手 — 回消息之前，先看懂对方｜Android / Windows / macOS</title>
+<title data-i18n="meta.title">Jev 聊天助手 — 开源 AI 聊天辅助工具｜Android / Windows / macOS</title>
 <meta name="description" content="Jev 聊天助手提供 Android、Windows、macOS 版本。读懂屏幕上的聊天，判断意图与风险，起草候选回复；填入后由你决定是否发送。安装包、教程和交流入口在 GitHub 项目主页。" data-i18n-attr="content:meta.desc">
+<meta name="robots" content="index, follow, max-image-preview:large">
 <link rel="canonical" href="https://chatjevs.com/">
-<link rel="alternate" hreflang="zh-CN" href="https://chatjevs.com/?lang=zh">
-<link rel="alternate" hreflang="en" href="https://chatjevs.com/?lang=en">
+<link rel="alternate" hreflang="zh-CN" href="https://chatjevs.com/">
+<link rel="alternate" hreflang="en" href="https://chatjevs.com/en.html">
 <link rel="alternate" hreflang="x-default" href="https://chatjevs.com/">
 <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
@@ -29,28 +30,88 @@
 <meta name="twitter:title" content="Jev 聊天助手 — 回消息之前，先看懂对方" data-i18n-attr="content:meta.ogTitle">
 <meta name="twitter:description" content="读懂对方、三条回复、一键填入。开源 MIT，Android / Windows / macOS 三端。程序只填不发。" data-i18n-attr="content:meta.ogDesc">
 <meta name="twitter:image" content="https://chatjevs.com/assets/og.png">
-<script type="application/ld+json">
-{"@context":"https://schema.org","@type":"SoftwareApplication","name":"Jev 聊天助手","alternateName":"Jev Chat Assistant","url":"https://chatjevs.com/","applicationCategory":"CommunicationApplication","operatingSystem":"Android 11+, Windows 10+, macOS 13+","softwareVersion":"1.4","license":"https://opensource.org/licenses/MIT","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"sameAs":["https://github.com/jev-chat/jev-chat-jarvis"],"author":{"@type":"Person","name":"Finderchangchang","url":"https://github.com/Finderchangchang"}}
+<script type="application/ld+json" id="site-schema">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "Person",
+      "@id": "https://chatjevs.com/#author",
+      "name": "Finderchangchang",
+      "url": "https://github.com/Finderchangchang"
+    },
+    {
+      "@type": "WebSite",
+      "@id": "https://chatjevs.com/#website",
+      "url": "https://chatjevs.com/",
+      "name": "Jev 聊天助手",
+      "inLanguage": [
+        "zh-CN",
+        "en"
+      ],
+      "publisher": {
+        "@id": "https://chatjevs.com/#author"
+      }
+    },
+    {
+      "@type": "SoftwareApplication",
+      "@id": "https://chatjevs.com/#software",
+      "name": "Jev 聊天助手",
+      "alternateName": [
+        "Jev Chat Assistant",
+        "Jev 聊天助手"
+      ],
+      "url": "https://chatjevs.com/",
+      "description": "Jev 聊天助手（Jev Chat Assistant）是开源的 AI 聊天辅助工具，提供 Android、Windows 和 macOS 版本。它帮助你分析消息、理解意图并起草候选回复，发送前由你检查和决定。",
+      "sameAs": [
+        "https://github.com/jev-chat/jev-chat-jarvis"
+      ],
+      "author": {
+        "@id": "https://chatjevs.com/#author"
+      },
+      "applicationCategory": "CommunicationApplication",
+      "operatingSystem": [
+        "Android",
+        "Windows",
+        "macOS"
+      ]
+    },
+    {
+      "@type": "WebPage",
+      "@id": "https://chatjevs.com/#webpage",
+      "url": "https://chatjevs.com/",
+      "name": "Jev 聊天助手 — 开源 AI 聊天辅助工具｜Android / Windows / macOS",
+      "description": "Jev 聊天助手提供 Android、Windows、macOS 版本。读懂屏幕上的聊天，判断意图与风险，起草候选回复；填入后由你决定是否发送。安装包、教程和交流入口在 GitHub 项目主页。",
+      "inLanguage": "zh-CN",
+      "isPartOf": {
+        "@id": "https://chatjevs.com/#website"
+      },
+      "mainEntity": {
+        "@id": "https://chatjevs.com/#software"
+      }
+    }
+  ]
+}
 </script>
 <script>
-  /* 首屏前应用主题和语言标记，避免闪烁；英文时先藏起中文正文，main.js 换完再显示（1.5 秒兜底） */
+  // Theme first; each language also has a complete, crawlable static HTML page.
   (function () {
     var d = document.documentElement;
     try {
-      var t = localStorage.getItem("jev-theme");
-      if (t === "dark" || t === "light") d.setAttribute("data-theme", t);
+      var theme = localStorage.getItem("jev-theme");
+      if (theme === "dark" || theme === "light") d.setAttribute("data-theme", theme);
     } catch (e) {}
-    // 分享链接 > 手动选择 > 浏览器首选语言。仅手动切换时保存偏好。
     var q = new URLSearchParams(location.search).get("lang");
     var saved = null;
     try { saved = localStorage.getItem("jev-lang"); } catch (e) {}
-    var preferred = (navigator.languages && navigator.languages[0]) || navigator.language || "zh";
-    var l = q === "zh" || q === "en" ? q :
-      (saved === "zh" || saved === "en" ? saved : (/^zh(?:-|$)/i.test(preferred) ? "zh" : "en"));
-    d.setAttribute("lang", l === "en" ? "en" : "zh-CN");
-    if (l === "en") {
-      d.classList.add("i18n-pending");
-      setTimeout(function () { d.classList.remove("i18n-pending"); }, 1500);
+    var isEnglishPage = /\/en\.html$/.test(location.pathname);
+    var next = q === "en" || q === "zh" ? q : (isEnglishPage ? "en" :
+      (saved === "en" || saved === "zh" ? saved : (/^zh(?:-|$)/i.test((navigator.languages && navigator.languages[0]) || navigator.language || "zh") ? "zh" : "en")));
+    if ((next === "en") !== isEnglishPage) {
+      var url = new URL(next === "en" ? "en.html" : "./", location.href);
+      url.search = location.search;
+      url.hash = location.hash;
+      location.replace(url.href);
     }
   })();
 </script>
@@ -58,9 +119,9 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400..800&amp;display=swap" media="print" onload="this.media='all'">
 <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Figtree:wght@400..800&amp;display=swap"></noscript>
-<link rel="stylesheet" href="style.css?v=20260928c">
-<script defer src="i18n.js?v=20260928c"></script>
-<script defer src="main.js?v=20260928c"></script>
+<link rel="stylesheet" href="style.css?v=20260930a">
+<script defer src="i18n.js?v=20260930a"></script>
+<script defer src="main.js?v=20260930a"></script>
 <script defer src="https://umami.jisikeji.cn/script.js" data-website-id="e294ceb6-4001-47a0-a18b-d225cd09017a"></script>
 </head>
 <body>
@@ -244,6 +305,20 @@
     </ul>
   </div></div>
 </section>
+
+<section class="product-facts" id="about" aria-labelledby="facts-title">
+  <div class="wrap">
+    <h2 id="facts-title" data-i18n="facts.title">Jev 聊天助手是什么？</h2>
+    <p class="facts-intro" data-i18n="facts.desc">Jev 聊天助手（Jev Chat Assistant）是开源的 AI 聊天辅助工具，提供 Android、Windows 和 macOS 版本。它帮助你分析消息、理解意图并起草候选回复，发送前由你检查和决定。</p>
+    <dl class="facts-grid">
+      <div><dt data-i18n="facts.use.label">适合什么需求</dt><dd data-i18n="facts.use">需要斟酌措辞、理解对话语气或获得回复思路的个人用户；判断结果仅供参考。</dd></div>
+      <div><dt data-i18n="facts.scope.label">平台与功能范围</dt><dd data-i18n="facts.scope">三端独立维护。本页的无障碍读屏、ML Kit OCR、权限设置和聊天 App 兼容性说明以 Android 版为准；桌面端功能以各自项目说明为准。</dd></div>
+      <div><dt data-i18n="facts.cost.label">费用与使用条件</dt><dd data-i18n="facts.cost">Android 项目采用 MIT 许可，软件免费开源；模型接口使用你自己的 API Key，可能产生服务商费用。桌面端许可与要求见对应项目。</dd></div>
+    </dl>
+    <p class="facts-source" data-i18n="facts.source">项目发布者：<a href='https://github.com/Finderchangchang' rel='noopener' target='_blank'>Finderchangchang</a>。安装包、各平台说明与更新请查看 <a href='https://github.com/jev-chat/jev-chat-jarvis' target='_blank' rel='noopener' data-umami-event='go-main-repo' data-umami-event-pos='facts' data-umami-event-intent='get'>GitHub 项目主页</a>。</p>
+  </div>
+</section>
+
 
 <!-- ===================== 01 先看懂 ===================== -->
 <section class="sec" id="read" aria-labelledby="read-title">
@@ -535,14 +610,14 @@
 
     <div class="faq-grid">
       <div class="faq rv">
-        <details><summary><span data-i18n="faq.q1">会不会自动帮我发送？</span><i class="acc" aria-hidden="true"></i></summary><div class="faq-a"><p data-i18n="faq.a1">不会。程序只把回复填进输入框，从不自动发送，也不碰转账、红包、收款。发不发、怎么改，都是你自己决定。</p></div></details>
-        <details><summary><span data-i18n="faq.q2">我的聊天内容会被上传吗？</span><i class="acc" aria-hidden="true"></i></summary><div class="faq-a"><p data-i18n="faq.a2">只在判断那一刻，把屏幕上近几条消息、你填的关系描述发给你自己配置的接口（开了知识库还会带上命中的笔记和联系人备注，开了历史还会带上这个人近期的聊天），之后不落盘、不进日志，作者不架设服务器、不经手。密钥只存在 App 私有空间。历史记录默认关闭，开了也只存在本机。OCR 走的是 ML Kit 中文离线识别，图片不上传。<a href='privacy.html' data-umami-event='view-privacy' data-umami-event-pos='faq'>完整隐私政策</a></p></div></details>
-        <details><summary><span data-i18n="faq.q3">要准备什么密钥？</span><i class="acc" aria-hidden="true"></i></summary><div class="faq-a"><p data-i18n="faq.a3">一把 OpenRouter API Key 就能跑起来：填在「判断接口」，回复和视觉接口留空会自动继承。也可以三路分开配，内置 OpenRouter、博查 Jev、TypeSafe 直连、DeepSeek 官方、通义兼容预设，各自一键测连通。判断接口选「博查 Jev」的话，当前限时免费，key 在 jev.bocha.cn 领。</p></div></details>
-        <details><summary><span data-i18n="faq.q4">要花钱吗？</span><i class="acc" aria-hidden="true"></i></summary><div class="faq-a"><p data-i18n="faq.a4">软件本身免费开源。模型调用走你自己的 API Key，按用量在对应服务商那边结算，项目不经手任何费用。</p></div></details>
-        <details><summary><span data-i18n="faq.q5">需要 root 吗？</span><i class="acc" aria-hidden="true"></i></summary><div class="faq-a"><p data-i18n="faq.a5">不需要 root，也不用装任何模块。它是非侵入的：只读屏幕上正在显示的对话，不改任何 App 的安装包，不走它们的接口或账号。</p></div></details>
-        <details><summary><span data-i18n="faq.q6">支持 iOS 和电脑吗？</span><i class="acc" aria-hidden="true"></i></summary><div class="faq-a"><p data-i18n="faq.a6">暂不支持 iOS。Android、Windows、macOS 的获取入口都在<a href='https://github.com/jev-chat/jev-chat-jarvis' target='_blank' rel='noopener' data-umami-event='go-main-repo' data-umami-event-pos='faq' data-umami-event-intent='get'>GitHub 项目主页</a>；各平台独立维护。网页端还在规划中，目前没有网页版。</p></div></details>
-        <details><summary><span data-i18n="faq.q7">悬浮球不见了，或者读不到消息？</span><i class="acc" aria-hidden="true"></i></summary><div class="faq-a"><p data-i18n="faq.a7">多半是国产 ROM 把后台冻结了。确认无障碍、悬浮窗、自启动、省电无限制四项都开着，小米 / HyperOS 尤其要开后两项；重装后悬浮窗权限会被重置，按主页向导再开一次。在聊天界面里随便点一下，通常就能恢复。</p></div></details>
-        <details><summary><span data-i18n="faq.q8">升级之后没反应？</span><i class="acc" aria-hidden="true"></i></summary><div class="faq-a"><p data-i18n="faq.a8">把系统设置里的无障碍开关关掉再打开一次。1.3 起新增了截屏能力，服务需要重新绑定才会生效。</p></div></details>
+        <details id="faq-q1"><summary><span data-i18n="faq.q1">会不会自动帮我发送？</span><i class="acc" aria-hidden="true"></i></summary><div class="faq-a"><p data-i18n="faq.a1">不会。程序只把回复填进输入框，从不自动发送，也不碰转账、红包、收款。发不发、怎么改，都是你自己决定。</p></div></details>
+        <details id="faq-q2"><summary><span data-i18n="faq.q2">我的聊天内容会被上传吗？</span><i class="acc" aria-hidden="true"></i></summary><div class="faq-a"><p data-i18n="faq.a2">只在判断那一刻，把屏幕上近几条消息、你填的关系描述发给你自己配置的接口（开了知识库还会带上命中的笔记和联系人备注，开了历史还会带上这个人近期的聊天），之后不落盘、不进日志，作者不架设服务器、不经手。密钥只存在 App 私有空间。历史记录默认关闭，开了也只存在本机。OCR 走的是 ML Kit 中文离线识别，图片不上传。<a href='privacy.html' data-umami-event='view-privacy' data-umami-event-pos='faq'>完整隐私政策</a></p></div></details>
+        <details id="faq-q3"><summary><span data-i18n="faq.q3">要准备什么密钥？</span><i class="acc" aria-hidden="true"></i></summary><div class="faq-a"><p data-i18n="faq.a3">一把 OpenRouter API Key 就能跑起来：填在「判断接口」，回复和视觉接口留空会自动继承。也可以三路分开配，内置 OpenRouter、博查 Jev、TypeSafe 直连、DeepSeek 官方、通义兼容预设，各自一键测连通。判断接口选「博查 Jev」的话，当前限时免费，key 在 jev.bocha.cn 领。</p></div></details>
+        <details id="faq-q4"><summary><span data-i18n="faq.q4">要花钱吗？</span><i class="acc" aria-hidden="true"></i></summary><div class="faq-a"><p data-i18n="faq.a4">软件本身免费开源。模型调用走你自己的 API Key，按用量在对应服务商那边结算，项目不经手任何费用。</p></div></details>
+        <details id="faq-q5"><summary><span data-i18n="faq.q5">需要 root 吗？</span><i class="acc" aria-hidden="true"></i></summary><div class="faq-a"><p data-i18n="faq.a5">不需要 root，也不用装任何模块。它是非侵入的：只读屏幕上正在显示的对话，不改任何 App 的安装包，不走它们的接口或账号。</p></div></details>
+        <details id="faq-q6"><summary><span data-i18n="faq.q6">支持 iOS 和电脑吗？</span><i class="acc" aria-hidden="true"></i></summary><div class="faq-a"><p data-i18n="faq.a6">暂不支持 iOS。Android、Windows、macOS 的获取入口都在<a href='https://github.com/jev-chat/jev-chat-jarvis' target='_blank' rel='noopener' data-umami-event='go-main-repo' data-umami-event-pos='faq' data-umami-event-intent='get'>GitHub 项目主页</a>；各平台独立维护。网页端还在规划中，目前没有网页版。</p></div></details>
+        <details id="faq-q7"><summary><span data-i18n="faq.q7">悬浮球不见了，或者读不到消息？</span><i class="acc" aria-hidden="true"></i></summary><div class="faq-a"><p data-i18n="faq.a7">多半是国产 ROM 把后台冻结了。确认无障碍、悬浮窗、自启动、省电无限制四项都开着，小米 / HyperOS 尤其要开后两项；重装后悬浮窗权限会被重置，按主页向导再开一次。在聊天界面里随便点一下，通常就能恢复。</p></div></details>
+        <details id="faq-q8"><summary><span data-i18n="faq.q8">升级之后没反应？</span><i class="acc" aria-hidden="true"></i></summary><div class="faq-a"><p data-i18n="faq.a8">把系统设置里的无障碍开关关掉再打开一次。1.3 起新增了截屏能力，服务需要重新绑定才会生效。</p></div></details>
         <p class="faq-more" data-i18n="faq.more">没找到答案？<a href='https://github.com/jev-chat/jev-chat-jarvis/issues' target='_blank' rel='noopener' data-umami-event='click-issues' data-umami-event-pos='faq'>提一个 Issue</a>，或到<a href='https://github.com/jev-chat/jev-chat-jarvis' target='_blank' rel='noopener' data-umami-event='go-main-repo' data-umami-event-pos='faq-community' data-umami-event-intent='community'>项目主页查看交流方式</a>。</p>
       </div>
 
@@ -631,6 +706,8 @@
     </nav>
   </div>
   <div class="wrap"><div class="foot-bottom">
+    <p class="language-links"><a href="./?lang=zh" hreflang="zh-CN" lang="zh-CN">简体中文</a> · <a href="en.html" hreflang="en" lang="en">English</a> · <a href="llms.txt" data-i18n="facts.text">项目资料（文本）</a></p>
+
     <p data-i18n="ft.copy">© 2026 Jev 聊天助手 · <a href='https://github.com/jev-chat/jev-chat-jarvis/blob/main/LICENSE' target='_blank' rel='noopener'>MIT 开源</a> · 可商用，须注明出处（<a href='https://github.com/jev-chat/jev-chat-jarvis/blob/main/NOTICE' target='_blank' rel='noopener'>NOTICE</a>） · <a href='privacy.html' data-umami-event='view-privacy' data-umami-event-pos='footer-legal'>隐私政策</a></p>
     <p class="fine" data-i18n="ft.legal">仅供个人学习与研究使用，只处理你自己设备上、你自己有权查看的聊天，请遵守各软件许可协议与当地法律法规。</p>
   </div>

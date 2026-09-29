@@ -56,21 +56,18 @@
   }
 
   // 首页 head 已决定语言；共用这次判定，确保首屏标记和正文一致。
-  var initial = I18N && root.getAttribute("lang") === "en" ? "en" : "zh";
-
+  var initial = root.getAttribute("lang") === "en" ? "en" : "zh";
   var langBtn = $("#langBtn");
   if (langBtn && I18N) {
     langBtn.addEventListener("click", function () {
       var next = lang === "en" ? "zh" : "en";
-      applyLang(next);
       save(LANG_KEY, next);
       track("toggle-lang", { to: next });
-      var params = new URLSearchParams(location.search);
-      if (params.has("lang") && window.history && history.replaceState) {
-        params.set("lang", next);
-        var url = location.pathname + "?" + params.toString() + location.hash;
-        history.replaceState(null, "", url);
-      }
+      var url = new URL(next === "en" ? "en.html" : "./", location.href);
+      url.search = location.search;
+      url.searchParams.set("lang", next);
+      url.hash = location.hash;
+      location.assign(url.href);
     });
   }
 

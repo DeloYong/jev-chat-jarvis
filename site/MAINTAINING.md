@@ -1,6 +1,6 @@
 # 维护说明
 
-chatjevs.com 是纯静态站：GitHub Pages 从 `jev-chat/jev-chat.github.io` 的 `main` 分支根目录直出，没有框架、没有构建步骤。合并到 `main` 就是上线。同一套页面另有两份拷贝（`jev-chat-jarvis` 仓库的 `site/` 目录和 `gh-pages` 分支），改完这里要同步过去。
+chatjevs.com 是纯静态站：GitHub Pages 从 `jev-chat/jev-chat.github.io` 的 `main` 分支根目录直出，没有框架，发布时无需构建；维护时需生成英文页和发现文件（见下文）。合并到 `main` 就是上线。同一套页面另有两份拷贝（`jev-chat-jarvis` 仓库的 `site/` 目录和 `gh-pages` 分支），改完这里要同步过去。
 
 ## 文件一览
 
@@ -22,7 +22,8 @@ chatjevs.com 是纯静态站：GitHub Pages 从 `jev-chat/jev-chat.github.io` �
 1. 只改 `i18n.js`，中英两个字典一起改。
 2. 跑 `node tools/check-i18n.mjs --fix`：把中文写进 `index.html`（没有 JS 的访客、搜索引擎、社交平台抓取看到的就是这份中文）。
 3. 再跑一遍 `node tools/check-i18n.mjs`，看到「✓ 中英文案一致，没有缺键和孤儿键」再提交。
-4. 本地看一眼（见「本地预览」），中文、`?lang=en` 各看一遍。
+4. 跑 `node tools/build-discovery.mjs`，同步静态英文页、JSON-LD、sitemap、robots 和文本资料，再跑 `node tools/build-discovery.mjs --check` 检查没有过期产物。
+5. 本地看一眼（见「本地预览」），中文、`?lang=en` 各看一遍。
 
 检查脚本会拦下：HTML 里用了但字典里没有的键、中英字典键不一致、HTML 里的中文和字典不一致、字典里没人用的孤儿键、重复键、空值、`data-i18n` 嵌套。英文里混进汉字会给提醒（「切换到中文」「接口」「清空知识库与历史」这三处是故意的：App 界面是中文，英文用户要照着找按钮）。
 
@@ -69,7 +70,7 @@ grep -n 'src="/\|href="/' index.html privacy.html   # 本地资源必须是相�
 
 ## 版本号与产品获取入口
 
-**安卓新版本**：以主仓库已发布的 Release 为准更新 `index.html` 中三端卡片的 Android 版本、05 节 adb 文件名、收尾版本行和 JSON-LD `softwareVersion`；如包体大小变化，更新 `lim.8` 中英文案。下载文件及入口在主仓库 README 和 Release 维护，官网获取链接仍指向主仓库三端区。旧 `download/` 文件继续保留供既有外链使用。
+**安卓新版本**：以主仓库已发布的 Release 为准更新 `index.html` 中三端卡片的 Android 版本、05 节 adb 文件名、收尾版本行（三端版本独立，JSON-LD 不使用统一 `softwareVersion`）；如包体大小变化，更新 `lim.8` 中英文案。下载文件及入口在主仓库 README 和 Release 维护，官网获取链接仍指向主仓库三端区。旧 `download/` 文件继续保留供既有外链使用。
 
 **Windows / macOS 新版本**：确认正式发布页后，更新 05 节对应卡片和收尾版本行。官网仍只指向主仓库三端区，不直接分流到桌面仓库。
 
@@ -161,6 +162,33 @@ node tools/check-i18n.mjs
 
 ## 首次访问语言
 
-首页按以下顺序决定语言：有效的 `?lang=zh` / `?lang=en` → 用户手动切换后保存在 `jev-lang` 的选择 → 浏览器首选语言（`zh` 及其地区变体显示简体中文，其余显示英文；浏览器不提供语言时回退中文）。自动识别和分享链接不写入长期偏好；手动切换才保存。存储不可用时仍可识别浏览器语言、使用语言链接和当页切换。
+首页按以下顺序决定语言：有效的 `?lang=zh/en` → `/en.html` 固定英文入口 → 用户手动保存的选择 → 浏览器首选语言（中文显示中文，其余显示英文）。语言不符时导航到相应静态页；手动按钮保存选择并保留分享参数与章节。
 
 公众号可以分享 `https://chatjevs.com/?lang=zh`，英文渠道可以分享 `https://chatjevs.com/?lang=en`。无参数链接自动适配。检测逻辑位于首页 head，main.js 复用其结果，避免首屏语言不一致。不依赖 IP、地区或来源网站。隐私政策仍保留中文全文与英文摘要；首页英文入口直达英文摘要。
+
+
+## 搜索与 AI 搜索维护（2026-09-30）
+
+- 中文页面 `/`，英文页面 `/en.html`：都包含完整静态正文、各自 canonical、互相对应的 hreflang、OG 和与可见正文一致的 JSON-LD。英文页由字典生成，不手改。
+- 保留旧 `?lang=zh/en` 分享链接。启用 JS 时导航到对应静态页面；无 JS 的英文入口使用 `/en.html`。页脚语言链接在无 JS 时也可用。
+- 常见问题有稳定的 `#faq-q1` 等锚点，可直接分享某一问题。
+- `facts.*` 是产品定位、使用范围、费用和来源的文案来源；`llms.txt` 从同一份文案生成。它是方便读取的文本索引，不是搜索收录或 AI 推荐的保证。
+- `robots.txt` 允许公开页面抓取，明确列出 OAI-SearchBot / PerplexityBot。两站此前没有 robots.txt，本次保留默认可抓取状态；搜索爬虫和模型训练爬虫用途不同。
+- `sitemap.xml` 只列本站规范页面，不填猜测的修改日期；保留自引用及双向 hreflang。镜像使用官方域名 canonical，不生成镜像域名版本。
+- 不写虚构评分、评价、用户数或背书；不添加仅供机器看到的功能承诺。Jev 三端版本各自维护，不能用 Android 版本号代表三端，也不能把 Android 的许可/权限说明概括成所有平台相同。
+
+维护命令：
+
+```bash
+node tools/check-i18n.mjs --fix
+node tools/build-discovery.mjs
+node tools/build-discovery.mjs --check
+node --check main.js
+git diff --check
+```
+
+上线前检查两种语言、375 / 1440 宽度、浅深色、禁用 JS、语言切换和隐私链接。确认 sitemap 内页面返回 200，robots 不屏蔽正文，线上文件与提交一致。
+
+效果验证：在已有的 Search Console / Bing Webmaster Tools 中提交 sitemap，查看实际抓取/索引与 AI 搜索表现；Umami 的 AI 来源访问与 GitHub 入口点击只说明访问和点击，不能当作被 AI 推荐的次数或下载数。不要为了提交 sitemap 采用已废弃的匿名 ping 接口。账号验证与后续表现以平台真实记录为准。
+
+依据：[Google AI 搜索指南](https://developers.google.com/search/docs/fundamentals/ai-optimization-guide)、[OpenAI 爬虫说明](https://developers.openai.com/api/docs/bots)、[Perplexity 爬虫说明](https://docs.perplexity.ai/docs/resources/perplexity-crawlers)。

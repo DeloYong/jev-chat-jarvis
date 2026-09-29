@@ -225,3 +225,6 @@ if (errors.length) {
   process.exit(1);
 }
 console.log("✓ 中英文案一致，没有缺键和孤儿键");
+
+// Reuse the HTML scanner for deterministic static language generation.
+export { scan, encodeAttr, DICT };

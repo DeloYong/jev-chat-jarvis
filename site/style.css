@@ -693,3 +693,14 @@ details[open] > summary .acc { border-color: var(--blue); color: var(--blue-ink)
   .nav, .demo-ctl, .end, .skip { display: none !important; }
   html.anim .rv { opacity: 1 !important; transform: none !important; }
 }
+
+/* Readable product facts, shared by the static Chinese and English pages. */
+.product-facts { scroll-margin-top: 85px; padding: 42px 0; background: var(--bg-tint); border-block: 1px solid var(--line); }
+.product-facts h2 { font-size: clamp(1.4rem, 3vw, 2rem); margin: 0 0 14px; }
+.facts-intro { max-width: 78ch; line-height: 1.8; }
+.facts-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px; margin: 24px 0; }
+.facts-grid dt { font-weight: 700; margin-bottom: 8px; }
+.facts-grid dd { margin: 0; color: var(--ink-2); line-height: 1.8; }
+.facts-source, .language-links { font-size: .875rem; line-height: 1.8; }
+.facts-source a, .language-links a { text-decoration: underline; text-underline-offset: 3px; }
+@media (max-width: 700px) { .facts-grid { grid-template-columns: 1fr; gap: 18px; } }

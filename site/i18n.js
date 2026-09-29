@@ -7,7 +7,18 @@
  */
 window.JEV_I18N = {
   "zh": {
-    "meta.title": "Jev 聊天助手 — 回消息之前，先看懂对方｜Android / Windows / macOS",
+    "facts.title": "Jev 聊天助手是什么？",
+    "facts.desc": "Jev 聊天助手（Jev Chat Assistant）是开源的 AI 聊天辅助工具，提供 Android、Windows 和 macOS 版本。它帮助你分析消息、理解意图并起草候选回复，发送前由你检查和决定。",
+    "facts.use.label": "适合什么需求",
+    "facts.use": "需要斟酌措辞、理解对话语气或获得回复思路的个人用户；判断结果仅供参考。",
+    "facts.scope.label": "平台与功能范围",
+    "facts.scope": "三端独立维护。本页的无障碍读屏、ML Kit OCR、权限设置和聊天 App 兼容性说明以 Android 版为准；桌面端功能以各自项目说明为准。",
+    "facts.cost.label": "费用与使用条件",
+    "facts.cost": "Android 项目采用 MIT 许可，软件免费开源；模型接口使用你自己的 API Key，可能产生服务商费用。桌面端许可与要求见对应项目。",
+    "facts.source": "项目发布者：<a href='https://github.com/Finderchangchang' rel='noopener' target='_blank'>Finderchangchang</a>。安装包、各平台说明与更新请查看 <a href='https://github.com/jev-chat/jev-chat-jarvis' target='_blank' rel='noopener' data-umami-event='go-main-repo' data-umami-event-pos='facts' data-umami-event-intent='get'>GitHub 项目主页</a>。",
+    "facts.text": "项目资料（文本）",
+
+    "meta.title": "Jev 聊天助手 — 开源 AI 聊天辅助工具｜Android / Windows / macOS",
     "meta.desc": "Jev 聊天助手提供 Android、Windows、macOS 版本。读懂屏幕上的聊天，判断意图与风险，起草候选回复；填入后由你决定是否发送。安装包、教程和交流入口在 GitHub 项目主页。",
     "meta.ogTitle": "Jev 聊天助手 — 回消息之前，先看懂对方",
     "meta.ogDesc": "读懂对方、三条回复、一键填入。开源 MIT，Android / Windows / macOS 三端。程序只填不发。",
@@ -309,7 +320,18 @@ window.JEV_I18N = {
   },
 
   "en": {
-    "meta.title": "Jev Chat Assistant — read them first, then reply | Android / Windows / macOS",
+    "facts.title": "What is Jev Chat Assistant?",
+    "facts.desc": "Jev Chat Assistant is an open-source AI chat companion with Android, Windows and macOS versions. It helps you analyze messages, interpret intent and draft reply options. You review the wording and decide whether to send.",
+    "facts.use.label": "Who it is for",
+    "facts.use": "Individuals who want help choosing words, interpreting conversational tone or drafting a reply. Its assessments are suggestions, not certain conclusions.",
+    "facts.scope.label": "Platforms and feature scope",
+    "facts.scope": "Each platform is maintained separately. Accessibility capture, ML Kit OCR, permissions and chat-app compatibility on this page describe the Android version. See each desktop project for its own capabilities.",
+    "facts.cost.label": "Costs and requirements",
+    "facts.cost": "The Android project is free and open source under MIT. Model calls use your own API key and may incur provider charges. Desktop licenses and requirements are documented in their respective projects.",
+    "facts.source": "Project publisher: <a href='https://github.com/Finderchangchang' rel='noopener' target='_blank'>Finderchangchang</a>. Find packages, platform documentation and updates on the <a href='https://github.com/jev-chat/jev-chat-jarvis' target='_blank' rel='noopener' data-umami-event='go-main-repo' data-umami-event-pos='facts' data-umami-event-intent='get'>GitHub project homepage</a>.",
+    "facts.text": "Project facts (text)",
+
+    "meta.title": "Jev Chat Assistant — Open-source AI chat companion for Android, Windows and macOS",
     "meta.desc": "Jev Chat Assistant is available for Android, Windows, and macOS. It reads visible chats, judges intent and risk, drafts replies, and fills the one you choose. Sending stays manual. Find installers, guides, and community links on GitHub.",
     "meta.ogTitle": "Jev Chat Assistant — read them first, then reply",
     "meta.ogDesc": "Reads the other person, suggests three replies, fills one in. Open source (MIT) for Android, Windows and macOS. It never sends for you.",
