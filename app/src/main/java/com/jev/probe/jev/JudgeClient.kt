@@ -96,7 +96,10 @@ class JudgeClient(private val prefs: Prefs) {
             .put("state", state)
             .put("questions", questions)
         val resp = HttpJson.post(url, prefs.judgeKey, body, Route.JUDGE, HttpJson.headersFor(url))
-        return resp.optJSONObject("answers") ?: JSONObject()
+        // No `answers` means the address does not speak the decisions protocol.
+        // Returning an empty object here used to parse into seven nulls with
+        // error == null, i.e. a 成功 that judged nothing.
+        return ResponseShape.jevAnswers(Route.JUDGE, resp)
     }
 
     private fun parseChoice(o: JSONObject?): Choice? {

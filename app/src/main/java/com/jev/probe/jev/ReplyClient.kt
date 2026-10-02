@@ -29,7 +29,7 @@ class ReplyClient(private val prefs: Prefs) {
             "每条不超过 40 字，口语、自然、像真人在聊天软件里发消息。不要解释，不要加引号以外的内容，直接输出 JSON 数组。"
         val user = knowledgeBlock(relationship, ctx) +
             "关系：$relationship\n\n最近对话：\n$convo\n\n请给出 3 条候选回复。"
-        return parseThree(chat(sys, user, temperature = 0.8))
+        return ResponseShape.threeCandidates(Route.REPLY, chat(sys, user, temperature = 0.8))
     }
 
     /** The background + history preamble; empty string when there is no context. */
@@ -68,7 +68,11 @@ class ReplyClient(private val prefs: Prefs) {
         return chat(sys, text, temperature = 0.2).trim()
     }
 
-    /** One chat-completions round trip; returns the assistant message content. */
+    /**
+     * One chat-completions round trip; returns the assistant message content.
+     * A body without it throws rather than returning "" — an empty string used to
+     * look like a successful call all the way up to the settings page.
+     */
     private fun chat(system: String, user: String, temperature: Double): String {
         val url = prefs.replyEndpoint()
         val messages = JSONArray()
@@ -79,28 +83,6 @@ class ReplyClient(private val prefs: Prefs) {
             .put("messages", messages)
             .put("temperature", temperature)
         val resp = HttpJson.post(url, prefs.effectiveReplyKey(), body, Route.REPLY, HttpJson.headersFor(url))
-        return resp.optJSONArray("choices")?.optJSONObject(0)
-            ?.optJSONObject("message")?.optString("content") ?: ""
-    }
-
-    private fun parseThree(content: String): List<String> {
-        val start = content.indexOf('[')
-        val end = content.lastIndexOf(']')
-        if (start >= 0 && end > start) {
-            try {
-                val arr = JSONArray(content.substring(start, end + 1))
-                val out = ArrayList<String>()
-                for (i in 0 until arr.length()) out.add(arr.getString(i).trim())
-                if (out.size >= 3) return out.take(3)
-                while (out.size < 3) out.add("（稍等，我看下）")
-                return out
-            } catch (_: Exception) { }
-        }
-        // Fallback: split lines.
-        val lines = content.split("\n").map { it.trim().trimStart('-', '*', '1', '2', '3', '.', ' ', '"') }
-            .filter { it.isNotBlank() }
-        val out = lines.take(3).toMutableList()
-        while (out.size < 3) out.add("（稍等，我看下）")
-        return out
+        return ResponseShape.chatContent(Route.REPLY, resp)
     }
 }

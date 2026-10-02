@@ -72,6 +72,9 @@ android {
 
 dependencies {
     testImplementation("junit:junit:4.13.2")
+    // Real org.json for unit tests: the mockable android.jar only has stubs that
+    // throw, so anything parsing a response body could not be tested at all.
+    testImplementation("org.json:json:20240303")
     implementation("androidx.core:core-ktx:1.13.1")
     implementation("androidx.appcompat:appcompat:1.7.0")
     implementation("com.google.android.material:material:1.12.0")

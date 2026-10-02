@@ -53,8 +53,7 @@ class VisionClient(private val prefs: Prefs) {
             .put("messages", messages)
             .put("temperature", 0.0)
         val resp = HttpJson.post(url, prefs.effectiveVisionKey(), body, Route.VISION, HttpJson.headersFor(url))
-        return resp.optJSONArray("choices")?.optJSONObject(0)
-            ?.optJSONObject("message")?.optString("content") ?: ""
+        return ResponseShape.chatContent(Route.VISION, resp)
     }
 
     companion object {

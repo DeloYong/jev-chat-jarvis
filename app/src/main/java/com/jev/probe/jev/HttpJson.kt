@@ -24,7 +24,13 @@ object Route {
 class ApiException(
     val route: String,
     val status: Int?,
-    val snippet: String
+    val snippet: String,
+    /**
+     * False when repeating the request cannot possibly help — a wrong address or
+     * an incompatible protocol — so [HttpJson.post] fails fast instead of burning
+     * three round trips to report the same thing.
+     */
+    val retryable: Boolean = true
 ) : RuntimeException(buildMessage(route, status, snippet)) {
 
     companion object {
@@ -89,12 +95,18 @@ object HttpJson {
                 }
                 val text = readBody(conn.inputStream)
                 if (text.isBlank()) throw ApiException(route, code, "响应体为空")
-                return JSONObject(text)
+                // A 2xx status alone is not a success: some gateways answer an
+                // unknown path with 200 and an error body, which used to parse
+                // into an empty result and reach the UI as 成功.
+                return ResponseShape.ok(route, code, text)
             } catch (e: InterruptedException) {
                 Thread.currentThread().interrupt()
                 throw e
             } catch (e: ApiException) {
-                if (e.status != null && e.status in 400..499) throw e  // client error: no retry
+                // No retry on a client error, nor on anything already known to be
+                // permanent: throttling is signalled by the status code and
+                // handled above, before the body is read.
+                if (!e.retryable || (e.status != null && e.status in 400..499)) throw e
                 last = e
                 attempt++
                 if (attempt < MAX_ATTEMPTS) Thread.sleep(500L * (1L shl attempt))
