@@ -44,13 +44,12 @@ open class ChatCaptureService : AccessibilityService() {
     private val main = Handler(Looper.getMainLooper())
     private val worker = Executors.newFixedThreadPool(2)
 
-    /** Adapted chat apps, keyed by package name.
-     *  WeChat is intentionally NOT wired in: reading it (node tree / screenshot /
-     *  OCR) is what trips WeChat's anti-screenshot risk control, so it is fully
-     *  disabled and handled by a short-circuit notice instead of an adapter (see
-     *  [maybeCapture] / [onAccessibilityEvent]). [WeChatAdapter] is kept in the
-     *  codebase for a possible future restore, just not used here. */
-    private val adapters = listOf(QQAdapter(), XAdapter(), FeishuAdapter()).associateBy { it.pkg }
+    /** Adapted chat apps, keyed by package name. WeChat was dropped in v1.4
+     *  (its anti-screenshot risk control made both read paths unreliable) and
+     *  restored at the owner's decision — using it again means accepting that
+     *  risk, which the CHANGELOG states plainly. */
+    private val adapters =
+        listOf(QQAdapter(), XAdapter(), FeishuAdapter(), WeChatAdapter()).associateBy { it.pkg }
 
     /** Submit to the worker, ignoring rejection after the service is torn down
      *  (a stale overlay callback must never crash the process). */
@@ -90,6 +89,7 @@ open class ChatCaptureService : AccessibilityService() {
         if (session.observe(target)) {
             cancelAnalysis()
             currentSnapshot = null
+            manualSession = false
             activePkg = null
             lastSignature = ""
             lastOcrSignature = ""
@@ -105,8 +105,7 @@ open class ChatCaptureService : AccessibilityService() {
     /** Read the live target, never the previous chat's cached/stabilized title. */
     private fun targetFor(root: AccessibilityNodeInfo): ConversationSession.Target? {
         val pkg = root.packageName?.toString() ?: return null
-        if (pkg == PKG_WECHAT || pkg == packageName || pkg == "com.android.systemui" ||
-            pkg.contains("launcher", true) || pkg == "com.miui.home") return null
+        if (CaptureRules.isExcludedForeground(pkg, packageName)) return null
         val adapter = adapters[pkg]
         var messagesSignature: String? = null
         val title = if (adapter != null) {
@@ -132,6 +131,39 @@ open class ChatCaptureService : AccessibilityService() {
         return true
     }
 
+    /**
+     * Liveness for a capture the user asked for by hand: the same window is still
+     * in front and the session still accepts the token. Deliberately weaker than
+     * [isCurrent], which also demands that the adapter keep recognising a chat
+     * window with a readable title — WeChat strips the text both matches depend
+     * on, so the strict check can never pass there and used to discard every
+     * manual result (and hide the bubble on the way out). It has no destructive
+     * side effect: failing it must not tear down a session the user is using.
+     */
+    private fun isSameWindowLive(token: ConversationSession.Token): Boolean {
+        if (destroyed || !prefs.enabled || !session.accepts(token)) return false
+        val root = rootInActiveWindow ?: return false
+        return isSameWindow(root, token.target)
+    }
+
+    /** The window [root] belongs to is the one [target] describes. */
+    private fun isSameWindow(root: AccessibilityNodeInfo, target: ConversationSession.Target): Boolean =
+        root.packageName?.toString() == target.pkg && root.windowId == target.windowId
+
+    /** Which liveness rule applies to this round. */
+    private fun isLive(manual: Boolean, token: ConversationSession.Token): Boolean =
+        if (manual) isSameWindowLive(token) else isCurrent(token)
+
+    /**
+     * Whether a manual capture bound this very window, so the automatic path must
+     * not tear the session down just because the adapter cannot confirm a chat
+     * window here. For WeChat it never can: the text both the bubble match and
+     * the title match depend on is stripped, so without this every
+     * content-changed event would discard the result the user asked for.
+     */
+    private fun isManualWindowHeld(pkg: String?, root: AccessibilityNodeInfo): Boolean =
+        manualSession && session.target?.pkg == pkg && session.target?.windowId == root.windowId
+
     /** Only called on the main thread, including the context-completion callback. */
     private fun submitAnalysis(task: () -> Unit) {
         try { analysisTasks.add(worker.submit(task)) } catch (_: RejectedExecutionException) { }
@@ -141,6 +173,11 @@ open class ChatCaptureService : AccessibilityService() {
     private var pendingSnapshot: ChatSnapshot? = null
     @Volatile private var currentSnapshot: ChatSnapshot? = null
     private var foregroundPkg: String? = null
+
+    /** True while the session target was established by a manual capture, which
+     *  is the only way into an app whose tree we cannot read (WeChat). Those
+     *  rounds use [isSameWindowLive]; [observeTarget] clears the flag. */
+    private var manualSession = false
 
     // ---- OCR path (B stage). Everything here runs on the main thread: the
     // screenshot callback and the ML Kit callback are both posted back to it.
@@ -156,21 +193,13 @@ open class ChatCaptureService : AccessibilityService() {
      *  See [ocrSignature]: this is the brake on the OCR path. */
     private var lastOcrSignature: String = ""
 
-    /** WeChat is fully disabled — we never read it, so instead of a signature we
-     *  just track whether the "WeChat not supported" notice has been shown for
-     *  the current WeChat visit. Reset to false whenever a non-WeChat foreground
-     *  is seen, so it re-appears next visit but does not re-pop on every event. */
-    private var wechatNoticeShown = false
-
     override fun onServiceConnected() {
         super.onServiceConnected()
         prefs = Prefs(this)
         getSharedPreferences(Prefs.PREFS_MAIN, MODE_PRIVATE)
             .registerOnSharedPreferenceChangeListener(preferencesListener)
         overlay = OverlayController(this)
-        overlay?.onManualAnalyze = {
-            currentSnapshot?.let { pendingSnapshot = it; runAnalysis() }
-        }
+        overlay?.onManualAnalyze = { manualAnalyze() }
         // Bubble menu: file the open conversation as a knowledge-base contact.
         // Contacts are never created automatically — this is the one-tap way in.
         overlay?.onSaveContact = {
@@ -220,19 +249,11 @@ open class ChatCaptureService : AccessibilityService() {
         // our own settings screens, the launcher, and the system UI.
         if (type == AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED) {
             val fg = rootInActiveWindow?.packageName?.toString()
-            // WeChat is fully disabled: never read/screenshot/OCR/fill here, only
-            // show the one-time "not supported" notice and stop. Checked before the
-            // generic no-adapter branch because WeChat is no longer in `adapters`.
-            if (fg == PKG_WECHAT) { foregroundPkg = fg; showWeChatDisabled(auto = true); return }
             if (fg != null && fg !in adapters) {
                 val target = rootInActiveWindow?.let { targetFor(it) }
                 if (session.target != target) leaveConversation()
                 foregroundPkg = fg
-                wechatNoticeShown = false // left WeChat → allow the notice again next visit
-                val drop = fg == packageName ||
-                    fg.contains("launcher", ignoreCase = true) ||
-                    fg == "com.miui.home" ||
-                    fg == "com.android.systemui"
+                val drop = CaptureRules.isExcludedForeground(fg, packageName)
                 if (drop) overlay?.hide() else overlay?.showIdle(null)
                 return
             }
@@ -248,11 +269,6 @@ open class ChatCaptureService : AccessibilityService() {
     private fun maybeCapture() {
         val root = rootInActiveWindow ?: run { leaveConversation(); overlay?.hide(); return }
         val pkg = root.packageName?.toString()
-        // WeChat is fully disabled — no tree read, no screenshot, no OCR, no fill.
-        // A content-changed / scrolled event in WeChat only re-shows the one-time
-        // notice (deduped); it must never reach an adapter or the OCR path.
-        if (pkg == PKG_WECHAT) { showWeChatDisabled(auto = true); return }
-        wechatNoticeShown = false // any other foreground → allow the notice again next WeChat visit
         // Apps with no adapter are never handled automatically (v1.3 revision):
         // the only way in for them is the bubble menu's "截屏识别一次".
         val adapter = adapters[pkg] ?: run {
@@ -265,9 +281,17 @@ open class ChatCaptureService : AccessibilityService() {
         // bubble so the menu stays reachable. Without this, opening QQ / Feishu on
         // their list screen produced no bubble at all.
         val rawSnapshot = adapter.extract(root, resources)
-        if (rawSnapshot == null) { leaveConversation(); overlay?.showIdle(null); return }
+        if (rawSnapshot == null) {
+            if (!isManualWindowHeld(pkg, root)) leaveConversation()
+            overlay?.showIdle(null)
+            return
+        }
         val target = targetFor(root)
-        if (target == null) { leaveConversation(); overlay?.showIdle(null); return }
+        if (target == null) {
+            if (!isManualWindowHeld(pkg, root)) leaveConversation()
+            overlay?.showIdle(null)
+            return
+        }
         observeTarget(target)
         // Use only this window's title; never inherit another conversation's title.
         val snapshot = rawSnapshot
@@ -329,26 +353,6 @@ open class ChatCaptureService : AccessibilityService() {
         main.postDelayed(debounce, 800) // debounce bursts of content-changed events
     }
 
-    /**
-     * Foreground is WeChat, which is fully disabled: no node-tree read, no
-     * screenshot, no OCR, no fill. We only surface a one-time notice saying WeChat
-     * itself blocks reading. [auto] events (accessibility callbacks)
-     * show it once per WeChat visit — [wechatNoticeShown] dedupes them; a manual
-     * bubble tap ([auto] = false) always shows it. Never gated by the user's
-     * whitelist (it is an info notice, not a read) and only ever reached under
-     * the WeChat package.
-     */
-    private fun showWeChatDisabled(auto: Boolean) {
-        leaveConversation()
-        if (auto && wechatNoticeShown) return
-        wechatNoticeShown = true
-        // No popup panel in WeChat — a full card is intrusive when others can see
-        // the screen. Take the overlay off WeChat entirely and show the reason
-        // once as a small transient toast.
-        overlay?.hide()
-        overlay?.toast(WECHAT_DISABLED_MSG)
-    }
-
     /** A placeholder title an app shows only for a moment (e.g. X's "连接中…"
      *  right after opening a DM thread) — never a real conversation title.
      *  Blank/null counts too, so a caller can always fall back the same way. */
@@ -359,11 +363,33 @@ open class ChatCaptureService : AccessibilityService() {
         return TRANSIENT_TITLE_WORDS.any { lower.contains(it.lowercase()) }
     }
 
+    /**
+     * The panel's "分析当前对话" button. It used to be a bare
+     * `currentSnapshot?.let { … }`, so when nothing had been read yet — exactly
+     * the WeChat case — the tap did nothing at all: no message, no log.
+     */
+    private fun manualAnalyze() {
+        val block = CaptureRules.manualBlock(currentSnapshot != null, analyzing, prefs.enabled)
+        val message = block.message
+        if (message == null) {
+            pendingSnapshot = currentSnapshot
+            runAnalysis()
+            return
+        }
+        Log.w(TAG, "manual analyze blocked: $block fg=$foregroundPkg root=${rootInActiveWindow != null}")
+        if (block == ManualBlock.BUSY) overlay?.toast(message) else overlay?.showError(message)
+    }
+
     private fun runAnalysis() {
         val snapshot = pendingSnapshot ?: return
         if (analyzing || destroyed || !prefs.enabled) return
         val previous = session.token() ?: return
-        if (!isCurrent(previous)) return
+        // Captured once: a manual round keeps its relaxed liveness rule even if
+        // the flag is cleared while its network calls are still in flight. A
+        // conversation switch is still caught, because the token stops being
+        // accepted the moment the session observes a different target.
+        val manual = manualSession
+        if (!isLive(manual, previous)) return
         if (!prefs.hasKey()) { overlay?.showError("未设置判断接口密钥，去设置里填"); return }
         val token = session.begin() ?: return
         analyzing = true
@@ -378,7 +404,7 @@ open class ChatCaptureService : AccessibilityService() {
                 Log.w(TAG, "context build failed: ${e.javaClass.simpleName}"); null
             }
             main.post {
-                if (!isCurrent(token)) return@post
+                if (!isLive(manual, token)) return@post
                 overlay?.setContextInfo(ctx?.notes?.size ?: 0, ctx?.history?.size ?: 0)
                 var remaining = 2
                 fun completed() {
@@ -391,7 +417,7 @@ open class ChatCaptureService : AccessibilityService() {
                 submitAnalysis {
                     val judgment = client.judge(snapshot, rel, ctx)
                     main.post {
-                        if (isCurrent(token)) {
+                        if (isLive(manual, token)) {
                             if (judgment.error != null) overlay?.showError(judgment.error)
                             else overlay?.showJudgment(judgment)
                             completed()
@@ -405,7 +431,7 @@ open class ChatCaptureService : AccessibilityService() {
                         emptyList()
                     }
                     main.post {
-                        if (isCurrent(token)) {
+                        if (isLive(manual, token)) {
                             overlay?.showReplies(ranked, replyError) { text -> fillInput(token, text) }
                             completed()
                         }
@@ -425,20 +451,63 @@ open class ChatCaptureService : AccessibilityService() {
      */
     private fun ocrCaptureManual() {
         val root = rootInActiveWindow
-        val pkg = root?.packageName?.toString() ?: foregroundPkg ?: activePkg ?: ""
-        // WeChat is fully disabled: a manual "截屏识别一次" in WeChat must NOT take
-        // a screenshot — just show the notice (a manual tap always shows it).
-        if (pkg == PKG_WECHAT) { showWeChatDisabled(auto = false); return }
-        // Top bar text, if this app has one we can read; else the first OCR line.
-        val title = root?.let {
-            findTitleInActionBar(it, Int.MAX_VALUE, resources.displayMetrics.widthPixels, resources, 0.15, 0.85)
-        }
-        val target = root?.let { targetFor(it) } ?: run {
-            overlay?.toast("无法确认当前会话，请等待标题加载后重试")
+        if (root == null) {
+            // Not "the title has not loaded" — there is no tree at all, so there
+            // is nothing to aim a screenshot at either.
+            Log.w(TAG, "manual ocr: rootInActiveWindow=null fg=$foregroundPkg")
+            overlay?.showError("读不到当前界面的控件树，没法截屏识别。" +
+                "去系统设置里把本服务的无障碍开关关掉再打开一次，然后重进这个会话。")
             return
         }
-        observeTarget(target)
+        val pkg = root.packageName?.toString().orEmpty()
+        if (pkg.isEmpty() || CaptureRules.isExcludedForeground(pkg, packageName)) {
+            Log.w(TAG, "manual ocr: foreground not capturable pkg='$pkg'")
+            overlay?.toast(if (pkg.isEmpty()) "认不出当前是哪个应用" else "这个界面不用识别")
+            return
+        }
+        // A second tap while one is in flight used to be swallowed silently by
+        // ocrCapture's own guard.
+        if (ocrBusy) { overlay?.toast("上一次识别还没跑完，稍等"); return }
+        // A manual shot is the escape hatch for apps whose tree we cannot read, so
+        // it must not be gated on the adapter confirming a chat window, nor on a
+        // readable title. WeChat strips the text both depend on; the old strict
+        // gate answered with one vague toast and — through isCurrent's side effect
+        // — took the bubble away, which is the opposite of what the menu promises.
+        val adapter = adapters[pkg]
+        val fromAdapter = adapter?.extract(root, resources)
+        if (adapter != null && fromAdapter == null) logTreeIds(pkg, root)
+        // Top bar text, if this app has one we can read; else the first OCR line.
+        val title = fromAdapter?.title?.takeUnless { isTransientTitle(it) }
+            ?: findTitleInActionBar(root, Int.MAX_VALUE, resources.displayMetrics.widthPixels,
+                resources, 0.15, 0.85)
+        observeTarget(ConversationSession.Target(pkg, root.windowId, title))
+        manualSession = true
         ocrCapture(title, emptyList(), pkg, manual = true)
+    }
+
+    /**
+     * Log what a tree actually exposes when an adapted app's adapter found no
+     * chat window in it. The usual meaning is that an app update renamed the ids
+     * the adapter matches, and this line is the only way to learn the new ones.
+     * Ids and counts only — node text never reaches the log.
+     */
+    private fun logTreeIds(pkg: String, root: AccessibilityNodeInfo) {
+        val ids = ArrayList<String?>()
+        val stack = ArrayDeque<AccessibilityNodeInfo>()
+        stack.addLast(root)
+        var guard = 0
+        var nodes = 0
+        var withText = 0
+        while (stack.isNotEmpty() && guard < 5000) {
+            guard++
+            val node = stack.removeLast()
+            nodes++
+            if (!node.text.isNullOrBlank()) withText++
+            ids.add(node.viewIdResourceName)
+            for (i in node.childCount - 1 downTo 0) node.getChild(i)?.let { stack.addLast(it) }
+        }
+        Log.w(TAG, "manual ocr[$pkg]: no chat window matched; nodes=$nodes withText=$withText " +
+            CaptureRules.idInventory(ids))
     }
 
     /**
@@ -466,10 +535,10 @@ open class ChatCaptureService : AccessibilityService() {
     private fun ocrCapture(treeTitle: String?, rects: List<BubbleRect>, pkg: String, manual: Boolean) {
         if (ocrBusy || destroyed || !prefs.enabled) return
         val token = session.token() ?: return
-        if (!isCurrent(token)) return
+        if (!isLive(manual, token)) return
         ocrBusy = true
-        screenCapture.capture(shouldCapture = { isCurrent(token) }) { res ->
-            if (!isCurrent(token)) {
+        screenCapture.capture(shouldCapture = { isLive(manual, token) }) { res ->
+            if (!isLive(manual, token)) {
                 if (res is ScreenCapture.Result.Ok) res.bitmap.recycle()
                 ocrBusy = false
                 return@capture
@@ -586,7 +655,7 @@ open class ChatCaptureService : AccessibilityService() {
     /** Shared tail of both OCR paths: dedupe, then analyze or park the bubble. */
     private fun finishOcrSnapshot(snapshot: ChatSnapshot, pkg: String, manual: Boolean, token: ConversationSession.Token) {
         ocrBusy = false
-        if (!isCurrent(token)) return
+        if (!isLive(manual, token)) return
         // Counts only — OCR'd chat text never goes to logcat.
         Log.i(TAG, "ocr[$pkg] msgs=${snapshot.messages.size} manual=$manual")
         if (snapshot.messages.isEmpty()) {
@@ -621,13 +690,23 @@ open class ChatCaptureService : AccessibilityService() {
 
     /** Resolve only the originating chat's input, never an arbitrary foreground editor. */
     private fun inputFor(token: ConversationSession.Token): AccessibilityNodeInfo? {
-        if (!isCurrent(token)) return null
+        if (!isLive(manualSession, token)) return null
         val root = rootInActiveWindow ?: return null
-        if (targetFor(root) != token.target) return null
+        // Re-verified on every retry of the fill sequence, not just at the start.
+        // The strict comparison needs the adapter to re-confirm the chat window,
+        // which WeChat can never do; a manual round settles for the same window
+        // still being in front.
+        val sameWindow = if (manualSession) isSameWindow(root, token.target)
+        else targetFor(root) == token.target
+        if (!sameWindow) return null
         val input = when (token.target.pkg) {
             "com.tencent.mobileqq" -> root.findAccessibilityNodeInfosByViewId("com.tencent.mobileqq:id/input").firstOrNull()
             "com.ss.android.lark" -> root.findAccessibilityNodeInfosByViewId("com.ss.android.lark:id/kb_rich_text_content").firstOrNull()
             "com.twitter.android" -> findEditable(root)
+            // WeChat's input box has no stable public id (v1.0 approach): take the
+            // one editable node in the chat window. SET_TEXT → paste → clipboard
+            // fallbacks live in GuardedInputWriter; nothing here ever sends.
+            "com.tencent.mm" -> findEditable(root)
             else -> null // Unknown apps support explicit clipboard copy, not unverified writes.
         }
         // Re-read the node after SET_TEXT: the accessibility cache may still
@@ -640,11 +719,18 @@ open class ChatCaptureService : AccessibilityService() {
     /** Fill without blocking the main thread; all retries re-resolve the original target. */
     private fun fillInput(token: ConversationSession.Token, text: String) {
         fun finish(ok: Boolean) {
-            if (!isCurrent(token)) return
+            if (!isLive(manualSession, token)) return
             if (ok) overlay?.toast("已填入，确认后自己发送")
             else { copyToClipboard(text); overlay?.toast("已复制，长按输入框粘贴") }
         }
-        if (!isCurrent(token)) { overlay?.toast("会话已变化，请重新分析后填入"); return }
+        if (!isLive(manualSession, token)) {
+            // The conversation really did change (or the master switch went off).
+            // Never write into whatever is in front now; hand the text over
+            // through the clipboard rather than dropping it.
+            copyToClipboard(text)
+            overlay?.toast("会话已变化，已复制，长按输入框粘贴")
+            return
+        }
         if (inputFor(token) == null) { finish(false); return }
         GuardedInputWriter(
             resolve = {
@@ -716,16 +802,6 @@ open class ChatCaptureService : AccessibilityService() {
 
     companion object {
         private const val TAG = "JEVASSIST"
-
-        /** WeChat's package. Reading it (node tree / screenshot / OCR) is what
-         *  trips WeChat's anti-screenshot risk control, so it is fully disabled:
-         *  no adapter, no capture, only a one-time "not supported" notice. */
-        private const val PKG_WECHAT = "com.tencent.mm"
-
-        /** Shown once when the foreground is WeChat. Plain words, full-width
-         *  punctuation; steers the user to a still-supported app. */
-        private const val WECHAT_DISABLED_MSG =
-            "微信已限制读取，请在别的软件上使用"
 
         /** Whole-screen OCR keeps the middle: no action bar, no input area. */
         private const val TOP_CROP = 0.12f

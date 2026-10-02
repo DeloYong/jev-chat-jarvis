@@ -293,7 +293,12 @@ class OverlayController(private val ctx: Context) {
         // stale conversation) — either way an empty panel must never stay
         // literally blank.
         if (lastJudgment == null || contentBox?.childCount == 0) {
-            setContent(listOf(bigButton("分析当前对话") { onManualAnalyze?.invoke() }))
+            // The parked conversation's title, when we could read one. It says
+            // which chat the bubble is sitting on — and whether the tree gave us
+            // anything at all, which is the first thing to check when an app
+            // stops analysing. The parameter used to be ignored entirely.
+            val head = title?.takeUnless { it.isBlank() }?.let { listOf<View>(hint(it)) } ?: emptyList()
+            setContent(head + bigButton("分析当前对话") { onManualAnalyze?.invoke() })
         }
     }
 

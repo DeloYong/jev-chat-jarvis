@@ -24,7 +24,8 @@
 ## 关键背景（2026-09-21 实测结论，别重复踩）
 
 - 微信 8.0.52 起对普通无障碍服务**混淆/隐藏节点**。本机实测 `uiautomator dump` 对微信任何界面只返回一个空根节点。
-- 社区绕法：把无障碍服务的类名注册成系统内置的 `com.google.android.accessibility.selecttospeak.SelectToSpeakService`。**对 8.0.78 是否仍有效未验证，这就是探针 App 要回答的问题。**
+- 社区绕法：把无障碍服务的类名注册成系统内置的 `com.google.android.accessibility.selecttospeak.SelectToSpeakService`。**P1 实测对 8.0.78 有效**：伪装服务能读到微信完整聊天节点（普通服务名则只有空根节点），微信适配即基于此。
+- 微信支持时间线：v1.0–v1.3 伪装服务全链路支持；v1.4（2026-09-23）因微信对部分账号/设备开启**防截屏风控**（读节点/截屏都可能触发）全面停用；2026-09-30 按项目主人决定恢复——读取微信可能触发风控，风险自担。微信输入框无稳定公开 id，填入走通用 `findEditable`（树里唯一可编辑节点）+ `GuardedInputWriter` 的 SET_TEXT→粘贴→剪贴板三级兜底。
 - 兜底路线：无障碍服务的 `takeScreenshot()` + 本地 OCR（ML Kit），同样零 token。
 - 飞书 Android（2026-09-21 实测）：消息正文自绘，无障碍树里**没有文字**（伪装服务与 `uiautomator dump` 一致），只有 `bubble_content_container` 气泡位置、`group_name` 标题、`kb_rich_text_content` 输入框；正文要走 takeScreenshot + OCR。飞书默认左对齐布局，我/对方不能按左右判。
 - 手机 QQ 9.3.50（2026-09-21 实测，小米 14 / 1200×2670）：节点**不混淆**，普通 `uiautomator dump` 即可读。消息正文 `com.tencent.mobileqq:id/mjn`（TextView，text 即正文），群昵称 `id/mjq`，标题 `id/371`，输入框 `id/input`，发送按钮 `id/send_btn`（**绝不 performAction**）。时间戳与系统提示条无 id，只采 `id/mjn` 就自然排除。
