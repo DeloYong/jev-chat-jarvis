@@ -219,12 +219,15 @@ class QQAdapter : ChatAppAdapter {
                 if (b.top < firstBubbleTop) firstBubbleTop = b.top
             }
             if (!hasInput && id == INPUT_ID) hasInput = true
-            if (id == TITLE_ID && title == null) text?.let { if (it.isNotBlank()) title = it }
+            if (id in TITLE_IDS && title == null) text?.let { if (it.isNotBlank()) title = it }
             for (i in node.childCount - 1 downTo 0) node.getChild(i)?.let { stack.addLast(it) }
         }
         if (bubbles.isEmpty() && !hasInput) return null
 
-        if (title == null) title = findTitleInActionBar(root, firstBubbleTop, width, res)
+        // QQ 的标题左对齐(紧挨返回键), 默认的居中窗口(25%-75%)会把它排除、反而选中其下方的
+        // "在线 - WiFi" 状态行; 放宽下界到 15%, 同时仍排除返回键/未读数(中心约 6%-8%)。
+        // 同一区域内取最靠上的文字, 名字恒在状态行之上。
+        if (title == null) title = findTitleInActionBar(root, firstBubbleTop, width, res, minCenterRatio = 0.15)
         if (bubbles.isEmpty()) return ChatSnapshot(title, emptyList())
 
         val avatarEdge = (width * 0.13).toInt()
@@ -241,7 +244,9 @@ class QQAdapter : ChatAppAdapter {
 
     companion object {
         private const val BUBBLE_ID = "com.tencent.mobileqq:id/mjn"
-        private const val TITLE_ID = "com.tencent.mobileqq:id/371"
+        // 联系人名 id 随 QQ 版本变化: 9.3.50 为 371, 本机当前版本(2026-10-03 实测)为 3kc。
+        // 取不到时由 findTitleInActionBar 兜底, 所以这里只需列已见过的版本。
+        private val TITLE_IDS = setOf("com.tencent.mobileqq:id/371", "com.tencent.mobileqq:id/3kc")
         private const val INPUT_ID = "com.tencent.mobileqq:id/input"
     }
 }
