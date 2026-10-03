@@ -19,6 +19,7 @@ import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import android.widget.Toast
+import com.jev.probe.BuildConfig
 import com.jev.probe.core.Analysis
 import com.jev.probe.core.ChatSnapshot
 import com.jev.probe.core.Prefs
@@ -359,6 +360,35 @@ class OverlayController(private val ctx: Context) {
         setContent(listOf(
             line("出错了", "#DC2626", 14f, true),
             hint(msg)))
+    }
+
+    /**
+     * Hosted trial used up / plan expired. Not an error: the way forward is a
+     * button, with "use my own key" as the free alternative (open-source build only). Both open their
+     * screen in a new task, like [openSettings].
+     */
+    fun showPaywall(msg: String) {
+        ensureRoot(); bubble?.alpha = 1f
+        val items = mutableListOf<View>(
+            line("试用已结束", "#3A7AFE", 14f, true),
+            hint(msg),
+            bigButton("开通订阅") { openScreen("com.jev.probe.billing.PlanActivity") })
+        // 订阅版没有自带密钥这条路, 不展示提示。
+        if (!BuildConfig.HOSTED_ONLY) {
+            items += hint("也可以填自己的接口密钥，继续免费使用").apply {
+                setPadding(0, dp(8), 0, 0)
+                setOnClickListener { openScreen("com.jev.probe.SettingsActivity") }
+            }
+        }
+        setContent(items)
+        if (!expanded) toggle()
+    }
+
+    private fun openScreen(className: String) {
+        runCatching {
+            ctx.startActivity(Intent().setClassName(ctx, className).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+        }
+        if (expanded) toggle()
     }
 
     /**

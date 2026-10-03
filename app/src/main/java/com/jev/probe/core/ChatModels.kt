@@ -48,7 +48,9 @@ data class Analysis(
     val literalQuestion: Double?,
     val rankedReplies: List<RankedReply>,
     val latencyMs: Long,
-    val error: String? = null
+    val error: String? = null,
+    /** The error is the hosted gateway's 402 (trial used up / plan expired): show the paywall, not a plain error. */
+    val paywall: Boolean = false
 )
 
 data class Choice(val choice: String, val confidence: Double, val probabilities: Map<String, Double>)

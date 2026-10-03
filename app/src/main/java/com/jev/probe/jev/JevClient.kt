@@ -13,8 +13,11 @@ import com.jev.probe.core.kb.ChatContext
  */
 class JevClient(prefs: Prefs) {
 
-    private val judgeClient = JudgeClient(prefs)
-    private val replyClient = ReplyClient(prefs)
+    // One instance == one analysis: the shared id lets the hosted gateway bill the
+    // judge, draft and rank calls as a single unit.
+    private val analysisId = java.util.UUID.randomUUID().toString()
+    private val judgeClient = JudgeClient(prefs, analysisId)
+    private val replyClient = ReplyClient(prefs, analysisId)
 
     /** The 7 judgment questions. Errors come back inside [Analysis.error]. */
     fun judge(snapshot: ChatSnapshot, relationship: String, ctx: ChatContext? = null): Analysis =

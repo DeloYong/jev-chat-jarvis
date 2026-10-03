@@ -5,13 +5,18 @@ import com.jev.probe.core.Prefs
 import com.jev.probe.core.kb.ChatContext
 import org.json.JSONArray
 import org.json.JSONObject
+import java.util.UUID
 
 /**
  * The generative route: any OpenAI-compatible `/chat/completions` endpoint.
  * Drafts the 3 candidate replies, and (D stage) summarizes text. Reads
  * replyBaseUrl / replyKey / replyModel from [Prefs].
  */
-class ReplyClient(private val prefs: Prefs) {
+class ReplyClient(
+    private val prefs: Prefs,
+    /** Shared with the judge route of the same analysis (hosted metering). */
+    private val analysisId: String = UUID.randomUUID().toString()
+) {
 
     /**
      * Exactly 3 varied candidate replies in Chinese.
@@ -82,7 +87,8 @@ class ReplyClient(private val prefs: Prefs) {
             .put("model", prefs.replyModel)
             .put("messages", messages)
             .put("temperature", temperature)
-        val resp = HttpJson.post(url, prefs.effectiveReplyKey(), body, Route.REPLY, HttpJson.headersFor(url))
+        val resp = HttpJson.post(url, prefs.replyRouteKey(), body, Route.REPLY,
+            HttpJson.headersFor(url) + prefs.cloudHeaders(analysisId))
         return ResponseShape.chatContent(Route.REPLY, resp)
     }
 }

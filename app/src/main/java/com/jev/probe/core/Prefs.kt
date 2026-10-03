@@ -20,7 +20,7 @@ class Prefs(context: Context, prefsName: String = PREFS_MAIN) {
      * throwaway instances behind the settings test buttons and the KB self-check
      * have nothing to carry over, and used to print one migration line per tap.
      */
-    init { if (prefsName == PREFS_MAIN) { migrateIfNeeded(); unseedBochaDefaultIfUnconfigured() } }
+    init { if (prefsName == PREFS_MAIN) { migrateIfNeeded(); unseedBochaDefaultIfUnconfigured(); wipeByokIfHostedOnly() } }
 
     /**
      * v1.2 -> v1.3: the single `openrouter_key` becomes the judge route's key.
@@ -67,6 +67,21 @@ class Prefs(context: Context, prefsName: String = PREFS_MAIN) {
         }
         e.apply()
     }
+
+    /**
+     * 订阅版首次启动: 清掉历史自带密钥与旧 openrouter_key。它们在订阅版里再也用不上,
+     * 留着只是多一份泄露面。只清密钥, 不动接口地址/模型名。一次性, 靠标记位防重复。
+     * 必须排在 migrateIfNeeded 之后: 先迁移再清, 不会让旧密钥被重新拷回。
+     */
+    private fun wipeByokIfHostedOnly() {
+        if (!hostedOnly || sp.getBoolean(K_BYOK_WIPED, false)) return
+        sp.edit().remove(K_JUDGE_KEY).remove(K_REPLY_KEY).remove(K_VISION_KEY).remove(K_LEGACY_KEY)
+            .putBoolean(K_BYOK_WIPED, true).apply()
+        Log.i(TAG, "prefs: hosted-only build, cleared legacy BYOK keys")
+    }
+
+    /** 订阅版开关, 来自构建期的网关地址。 */
+    private val hostedOnly: Boolean get() = com.jev.probe.BuildConfig.HOSTED_ONLY
 
     // ---------------------------------------------------------------- judge
 
@@ -213,6 +228,66 @@ class Prefs(context: Context, prefsName: String = PREFS_MAIN) {
         get() = sp.getBoolean(K_AUTO, true)
         set(v) = sp.edit().putBoolean(K_AUTO, v).apply()
 
+    // ---------------------------------------------------------- hosted (cloud)
+
+    /**
+     * Hosted mode switch. When on AND [cloudAvailable] AND a token exists
+     * ([cloudActive]), the judge and reply routes go through the official gateway
+     * instead of the user's own provider settings. The BYOK fields are left
+     * untouched, so switching back is lossless.
+     */
+    var cloudEnabled: Boolean
+        get() = sp.getBoolean(K_CLOUD_ENABLED, false)
+        set(v) = sp.edit().putBoolean(K_CLOUD_ENABLED, v).apply()
+
+    /** Bearer token issued by the gateway for this device. Treated like an API key: never logged. */
+    var cloudToken: String
+        get() = sp.getString(K_CLOUD_TOKEN, "") ?: ""
+        set(v) = sp.edit().putString(K_CLOUD_TOKEN, v.trim()).apply()
+
+    /** The user accepted that chat text is sent to the operator's gateway (see PRIVACY.md). */
+    var cloudConsent: Boolean
+        get() = sp.getBoolean(K_CLOUD_CONSENT, false)
+        set(v) = sp.edit().putBoolean(K_CLOUD_CONSENT, v).apply()
+
+    /** Last entitlement JSON from the gateway, for display only; the server is the authority. */
+    var cloudEntitlementJson: String
+        get() = sp.getString(K_CLOUD_ENT, "") ?: ""
+        set(v) = sp.edit().putString(K_CLOUD_ENT, v).apply()
+
+    /** Order the user was sent to pay for, polled when they come back; blank = none pending. */
+    var cloudPendingOrder: String
+        get() = sp.getString(K_CLOUD_ORDER, "") ?: ""
+        set(v) = sp.edit().putString(K_CLOUD_ORDER, v).apply()
+
+    /** Random per-install id, used only when ANDROID_ID is unusable. */
+    var cloudDeviceFallback: String
+        get() = sp.getString(K_CLOUD_DEVICE, "") ?: ""
+        set(v) = sp.edit().putString(K_CLOUD_DEVICE, v).apply()
+
+    /** Gateway root baked in at build time (`-PjevCloudBase=`); blank = this build has no hosted mode. */
+    fun cloudBase(): String = com.jev.probe.BuildConfig.CLOUD_BASE_URL.trim().trimEnd('/')
+
+    fun cloudAvailable(): Boolean = cloudBase().startsWith("https://")
+
+    fun cloudActive(): Boolean = HostedPolicy.cloudActive(hostedOnly, cloudEnabled, cloudAvailable(), cloudToken)
+
+    /** 为真时端点与凭证一律指向网关; 订阅版恒为真, 保证不会回落到第三方。 */
+    private fun gatewayRoute(): Boolean = HostedPolicy.gatewayRoute(hostedOnly, cloudActive())
+
+    /** Judge route credential: the gateway token on the gateway route, else the user's own key. */
+    fun judgeRouteKey(): String = if (gatewayRoute()) cloudToken else judgeKey
+
+    /** Reply route credential, same rule as [judgeRouteKey]. */
+    fun replyRouteKey(): String = if (gatewayRoute()) cloudToken else effectiveReplyKey()
+
+    /**
+     * Metering header for the gateway: calls sharing one id are billed once.
+     * Empty for every third-party provider, which must never see it.
+     */
+    fun cloudHeaders(analysisId: String): Map<String, String> =
+        if (gatewayRoute()) mapOf("X-Analysis-Id" to analysisId) else emptyMap()
+
     // ------------------------------------------------------------- helpers
 
     /** Reply route key, falling back to the judge key. */
@@ -223,6 +298,7 @@ class Prefs(context: Context, prefsName: String = PREFS_MAIN) {
 
     /** Full POST URL for the Jev decisions call, per provider. */
     fun judgeEndpoint(): String {
+        if (gatewayRoute()) return "${cloudBase()}/v1/judge"
         val base = judgeBaseUrl.trim().trimEnd('/')
         return when (judgeProvider) {
             PROVIDER_BOCHA -> "$base/v1/systemone"    // same path as TypeSafe
@@ -235,7 +311,8 @@ class Prefs(context: Context, prefsName: String = PREFS_MAIN) {
     }
 
     /** Full POST URL for the OpenAI-compatible chat completions call. */
-    fun replyEndpoint(): String = "${replyBaseUrl.trim().trimEnd('/')}/chat/completions"
+    fun replyEndpoint(): String =
+        if (gatewayRoute()) "${cloudBase()}/v1/chat" else "${replyBaseUrl.trim().trimEnd('/')}/chat/completions"
 
     /** Same shape as [replyEndpoint]; blank falls back to the OpenRouter default. */
     fun visionEndpoint(): String {
@@ -250,8 +327,11 @@ class Prefs(context: Context, prefsName: String = PREFS_MAIN) {
         return wl.any { title.contains(it) }
     }
 
-    /** Readiness gate: the judge route is the one that must be configured. */
-    fun hasKey(): Boolean = judgeKey.isNotBlank()
+    /** Readiness gate for own-key mode. Always false in the subscription build. */
+    fun hasKey(): Boolean = !hostedOnly && judgeKey.isNotBlank()
+
+    /** Analysis can run: an active hosted session, or (open-source build only) the user's own judge key. */
+    fun hasAccess(): Boolean = HostedPolicy.hasAccess(hostedOnly, cloudActive(), judgeKey)
 
     companion object {
         private const val TAG = "JEVASSIST"
@@ -286,6 +366,13 @@ class Prefs(context: Context, prefsName: String = PREFS_MAIN) {
         private const val K_BUBBLE_Y = "bubble_y"
         private const val K_BUBBLE_X = "bubble_x"
         private const val K_AUTO = "auto_analyze"
+        private const val K_CLOUD_ENABLED = "cloud_enabled"
+        private const val K_CLOUD_TOKEN = "cloud_token"
+        private const val K_CLOUD_CONSENT = "cloud_consent"
+        private const val K_CLOUD_ENT = "cloud_entitlement"
+        private const val K_CLOUD_DEVICE = "cloud_device_fallback"
+        private const val K_CLOUD_ORDER = "cloud_pending_order"
+        private const val K_BYOK_WIPED = "byok_wiped_hosted_v1"
 
         const val PROVIDER_BOCHA = "bocha"
         const val PROVIDER_OPENROUTER = "openrouter"

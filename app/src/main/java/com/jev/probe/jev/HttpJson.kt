@@ -15,6 +15,7 @@ object Route {
     const val JUDGE = "判断接口"
     const val REPLY = "回复接口"
     const val VISION = "视觉接口"
+    const val CLOUD = "云端服务"
 }
 
 /**
@@ -30,8 +31,13 @@ class ApiException(
      * an incompatible protocol — so [HttpJson.post] fails fast instead of burning
      * three round trips to report the same thing.
      */
-    val retryable: Boolean = true
+    val retryable: Boolean = true,
+    /** 官方托管网关的错误码(如 trial_exhausted / plan_expired / daily_cap);非网关错误恒为 null。 */
+    val code: String? = null
 ) : RuntimeException(buildMessage(route, status, snippet)) {
+
+    /** 402 = 托管额度用完或订阅过期,UI 据此展示付费引导而不是普通报错。 */
+    val isPaywall: Boolean get() = status == 402
 
     companion object {
         fun buildMessage(route: String, status: Int?, snippet: String): String =
@@ -79,6 +85,11 @@ object HttpJson {
                 conn.outputStream.use { os: OutputStream -> os.write(bytes) }
                 val code = conn.responseCode
                 if (code == 429 || code == 529) {
+                    // Our gateway also uses 429 for a hard daily cap: retrying cannot help.
+                    if (code == 429) {
+                        val body = readBody(conn.errorStream)
+                        if (body.contains("\"gateway\"")) throw httpError(route, code, body)
+                    }
                     last = ApiException(route, code, "服务繁忙，已重试")
                     attempt++
                     if (attempt < MAX_ATTEMPTS) Thread.sleep(500L * (1L shl attempt))
@@ -89,10 +100,7 @@ object HttpJson {
                 // some OEM stacks), and a read can throw on a truncated response —
                 // either way this used to surface as a transport failure with no
                 // status, which then got retried even for a 401.
-                if (code !in 200..299) {
-                    val errText = readBody(conn.errorStream)
-                    throw ApiException(route, code, errText.ifBlank { "（响应体为空）" })
-                }
+                if (code !in 200..299) throw httpError(route, code, readBody(conn.errorStream))
                 val text = readBody(conn.inputStream)
                 if (text.isBlank()) throw ApiException(route, code, "响应体为空")
                 // A 2xx status alone is not a success: some gateways answer an
@@ -119,6 +127,52 @@ object HttpJson {
             }
         }
         throw last ?: ApiException(route, null, "请求失败")
+    }
+
+    /**
+     * Non-2xx -> [ApiException]. Our own gateway marks its errors with
+     * `{"gateway":true,"error":{"code","message"}}`; only those are unwrapped, so
+     * every third-party provider keeps showing its raw body exactly as before.
+     */
+    private fun httpError(route: String, status: Int, errText: String): ApiException {
+        if (errText.contains("\"gateway\"")) {
+            try {
+                val o = JSONObject(errText)
+                val err = o.optJSONObject("error")
+                if (o.optBoolean("gateway") && err != null) {
+                    return ApiException(route, status, err.optString("message").ifBlank { "（无说明）" },
+                        code = err.optString("code").ifBlank { null })
+                }
+            } catch (_: Exception) { /* fall through to the raw body */ }
+        }
+        return ApiException(route, status, errText.ifBlank { "（响应体为空）" })
+    }
+
+    /**
+     * One GET, no retry: used for cheap idempotent reads (entitlement, order
+     * status) where the caller just polls again.
+     */
+    fun get(url: String, key: String, route: String): JSONObject {
+        var conn: HttpURLConnection? = null
+        try {
+            conn = (URL(url).openConnection() as HttpURLConnection).apply {
+                requestMethod = "GET"
+                connectTimeout = 15000
+                readTimeout = 20000
+                setRequestProperty("Authorization", "Bearer $key")
+            }
+            val code = conn.responseCode
+            if (code !in 200..299) throw httpError(route, code, readBody(conn.errorStream))
+            val text = readBody(conn.inputStream)
+            if (text.isBlank()) throw ApiException(route, code, "响应体为空")
+            return JSONObject(text)
+        } catch (e: ApiException) {
+            throw e
+        } catch (e: Exception) {
+            throw ApiException(route, null, describe(e))
+        } finally {
+            conn?.disconnect()
+        }
     }
 
     /** Body text, or "" — a null stream or a read failure never costs us the status code. */

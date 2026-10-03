@@ -66,6 +66,126 @@ class SettingsActivity : AppCompatActivity() {
 
         root.addView(header("设置"))
 
+        // 订阅版没有自带接口, 整区不渲染; 开源版返回保存闭包, 由底部保存按钮触发。
+        val saveApi: () -> Unit = if (BuildConfig.HOSTED_ONLY) ({}) else buildApiSection(root)
+
+
+        // =================== 分析 ===================
+        root.addView(section("分析"))
+        val card2 = card()
+        card2.addView(label("关系描述（给 Jev 判断用）"))
+        val relEdit = edit(prefs.relationship, Prefs.DEFAULT_REL)
+        card2.addView(relEdit)
+        card2.addView(label("会话白名单（每行一个关键词，空=所有会话）"))
+        val wlEdit = edit(prefs.whitelist.joinToString("\n"), "留空则对所有会话生效").apply {
+            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE; minLines = 2
+        }
+        card2.addView(wlEdit)
+        val autoRow = toggleRow("对方发消息时自动分析", prefs.autoAnalyze)
+        card2.addView(autoRow)
+
+        // --- OCR 兜底（B 阶段）---
+        val ocrFallbackRow = toggleRow("树读不到正文时用 OCR 兜底", prefs.ocrFallback)
+        card2.addView(ocrFallbackRow)
+        card2.addView(text("飞书正文是画上去的，节点树里读不到，这时截一次屏本地识别（不上传）。", 11f, sub))
+        val ocrAutoRow = toggleRow("OCR 模式自动分析", prefs.ocrAutoAnalyze)
+        card2.addView(ocrAutoRow)
+        card2.addView(text("关闭时 OCR 认完只亮悬浮球，点一下再分析。", 11f, sub))
+
+        // --- 知识库 / 关联上下文（D 阶段） ---
+        val ctxRow = toggleRow("记录聊天历史（只存本机，用于关联上下文）", prefs.contextEnabled)
+        card2.addView(ctxRow)
+        card2.addView(text("关闭时不写任何聊天内容到磁盘；笔记与联系人匹配仍然照常工作。", 11f, sub))
+        card2.addView(label("注入最近历史条数（0–100）"))
+        val ctxCountEdit = edit(prefs.contextHistoryCount.toString(), "30").apply {
+            inputType = InputType.TYPE_CLASS_NUMBER
+        }
+        card2.addView(ctxCountEdit)
+        card2.addView(cardBtn("知识库与联系人") {
+            startActivity(android.content.Intent(this, KnowledgeActivity::class.java))
+        })
+        val kbResult = resultText()
+        card2.addView(cardBtn("清空知识库与历史") {
+            val c = KbStore.get(this).counts()
+            androidx.appcompat.app.AlertDialog.Builder(this)
+                .setTitle("清空知识库与历史")
+                .setMessage("将删除 ${c.notes} 条笔记、${c.contacts} 个联系人、${c.logLines} 条聊天历史。" +
+                    "密钥、白名单等设置不受影响。不可恢复。")
+                .setPositiveButton("清空") { _, _ ->
+                    KbStore.get(this).clearAll()
+                    kbResult.text = "已清空知识库与历史"
+                }
+                .setNegativeButton("取消", null)
+                .show()
+        })
+        // Deliberately low-key: a developer aid, not a user feature.
+        card2.addView(text("自检", 12f, sub).apply {
+            setPadding(dp(2), dp(12), dp(8), dp(2))
+            setOnClickListener {
+                kbResult.text = "自检中…"
+                worker.execute {
+                    val out = try { KbSelfCheck.run(this@SettingsActivity) }
+                    catch (e: Exception) { "自检异常：${e.javaClass.simpleName} ${e.message ?: ""}" }
+                    main.post { kbResult.text = out }
+                }
+            }
+        })
+        card2.addView(kbResult)
+        root.addView(card2)
+
+        // =================== 外观 ===================
+        root.addView(section("外观"))
+        val card3 = card()
+        val opacityLabel = label("悬浮窗不透明度：${prefs.overlayOpacity}%")
+        card3.addView(opacityLabel)
+        card3.addView(text("越低越透，越能看清下面的聊天", 12f, sub))
+        val seek = SeekBar(this).apply {
+            max = 40; progress = prefs.overlayOpacity - 60  // 60..100
+            setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+                override fun onProgressChanged(sb: SeekBar?, p: Int, u: Boolean) {
+                    opacityLabel.text = "悬浮窗不透明度：${p + 60}%"
+                }
+                override fun onStartTrackingTouch(sb: SeekBar?) {}
+                override fun onStopTrackingTouch(sb: SeekBar?) {}
+            })
+        }
+        card3.addView(seek)
+        root.addView(card3)
+
+        // =================== 关于与隐私 ===================
+        root.addView(section("关于与隐私"))
+        val aboutCard = card()
+        aboutCard.addView(text(
+            if (BuildConfig.HOSTED_ONLY) "这个 App 会读取你当前聊天窗口的文字，发往官方托管服务做判断和起草回复。服务端不保存聊天正文，详见隐私政策。"
+            else "这个 App 会读取你当前聊天窗口的文字，发给你自己配置的模型接口做判断和起草回复。作者不运营服务器，收不到你的数据。",
+            12f, sub))
+        aboutCard.addView(cardBtn("隐私政策") { openUrl(PRIVACY_URL) })
+        aboutCard.addView(cardBtn("开源仓库") { openUrl(REPO_URL) })
+        aboutCard.addView(text(versionLabel(), 11f, sub).apply { setPadding(0, dp(10), 0, dp(2)) })
+        root.addView(aboutCard)
+
+        // =================== 保存 ===================
+        root.addView(primaryBtn("保存全部设置") {
+            saveApi()
+
+            prefs.relationship = relEdit.text.toString()   // blank stays blank, on purpose
+            prefs.whitelist = wlEdit.text.toString().split("\n")
+                .map { it.trim() }.filter { it.isNotEmpty() }.toSet()
+            prefs.autoAnalyze = (autoRow.tag as? Boolean) ?: true
+            prefs.ocrFallback = (ocrFallbackRow.tag as? Boolean) ?: true
+            prefs.ocrAutoAnalyze = (ocrAutoRow.tag as? Boolean) ?: false
+            prefs.contextEnabled = (ctxRow.tag as? Boolean) ?: false
+            prefs.contextHistoryCount =
+                ctxCountEdit.text.toString().trim().toIntOrNull()?.coerceIn(0, 100) ?: 30
+            prefs.overlayOpacity = seek.progress + 60
+            Toast.makeText(this, "已保存", Toast.LENGTH_SHORT).show()
+        })
+
+        setContentView(scroll)
+    }
+
+    /** 接口配置三张卡(判断/回复/视觉)。订阅版不调用; 返回"保存"闭包。 */
+    private fun buildApiSection(root: LinearLayout): () -> Unit {
         // =================== 接口 ===================
         root.addView(section("接口"))
 
@@ -307,101 +427,7 @@ class SettingsActivity : AppCompatActivity() {
         visionCard.addView(visionResult)
         root.addView(visionCard)
 
-        // =================== 分析 ===================
-        root.addView(section("分析"))
-        val card2 = card()
-        card2.addView(label("关系描述（给 Jev 判断用）"))
-        val relEdit = edit(prefs.relationship, Prefs.DEFAULT_REL)
-        card2.addView(relEdit)
-        card2.addView(label("会话白名单（每行一个关键词，空=所有会话）"))
-        val wlEdit = edit(prefs.whitelist.joinToString("\n"), "留空则对所有会话生效").apply {
-            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE; minLines = 2
-        }
-        card2.addView(wlEdit)
-        val autoRow = toggleRow("对方发消息时自动分析", prefs.autoAnalyze)
-        card2.addView(autoRow)
-
-        // --- OCR 兜底（B 阶段）---
-        val ocrFallbackRow = toggleRow("树读不到正文时用 OCR 兜底", prefs.ocrFallback)
-        card2.addView(ocrFallbackRow)
-        card2.addView(text("飞书正文是画上去的，节点树里读不到，这时截一次屏本地识别（不上传）。", 11f, sub))
-        val ocrAutoRow = toggleRow("OCR 模式自动分析", prefs.ocrAutoAnalyze)
-        card2.addView(ocrAutoRow)
-        card2.addView(text("关闭时 OCR 认完只亮悬浮球，点一下再分析。", 11f, sub))
-
-        // --- 知识库 / 关联上下文（D 阶段） ---
-        val ctxRow = toggleRow("记录聊天历史（只存本机，用于关联上下文）", prefs.contextEnabled)
-        card2.addView(ctxRow)
-        card2.addView(text("关闭时不写任何聊天内容到磁盘；笔记与联系人匹配仍然照常工作。", 11f, sub))
-        card2.addView(label("注入最近历史条数（0–100）"))
-        val ctxCountEdit = edit(prefs.contextHistoryCount.toString(), "30").apply {
-            inputType = InputType.TYPE_CLASS_NUMBER
-        }
-        card2.addView(ctxCountEdit)
-        card2.addView(cardBtn("知识库与联系人") {
-            startActivity(android.content.Intent(this, KnowledgeActivity::class.java))
-        })
-        val kbResult = resultText()
-        card2.addView(cardBtn("清空知识库与历史") {
-            val c = KbStore.get(this).counts()
-            androidx.appcompat.app.AlertDialog.Builder(this)
-                .setTitle("清空知识库与历史")
-                .setMessage("将删除 ${c.notes} 条笔记、${c.contacts} 个联系人、${c.logLines} 条聊天历史。" +
-                    "密钥、白名单等设置不受影响。不可恢复。")
-                .setPositiveButton("清空") { _, _ ->
-                    KbStore.get(this).clearAll()
-                    kbResult.text = "已清空知识库与历史"
-                }
-                .setNegativeButton("取消", null)
-                .show()
-        })
-        // Deliberately low-key: a developer aid, not a user feature.
-        card2.addView(text("自检", 12f, sub).apply {
-            setPadding(dp(2), dp(12), dp(8), dp(2))
-            setOnClickListener {
-                kbResult.text = "自检中…"
-                worker.execute {
-                    val out = try { KbSelfCheck.run(this@SettingsActivity) }
-                    catch (e: Exception) { "自检异常：${e.javaClass.simpleName} ${e.message ?: ""}" }
-                    main.post { kbResult.text = out }
-                }
-            }
-        })
-        card2.addView(kbResult)
-        root.addView(card2)
-
-        // =================== 外观 ===================
-        root.addView(section("外观"))
-        val card3 = card()
-        val opacityLabel = label("悬浮窗不透明度：${prefs.overlayOpacity}%")
-        card3.addView(opacityLabel)
-        card3.addView(text("越低越透，越能看清下面的聊天", 12f, sub))
-        val seek = SeekBar(this).apply {
-            max = 40; progress = prefs.overlayOpacity - 60  // 60..100
-            setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
-                override fun onProgressChanged(sb: SeekBar?, p: Int, u: Boolean) {
-                    opacityLabel.text = "悬浮窗不透明度：${p + 60}%"
-                }
-                override fun onStartTrackingTouch(sb: SeekBar?) {}
-                override fun onStopTrackingTouch(sb: SeekBar?) {}
-            })
-        }
-        card3.addView(seek)
-        root.addView(card3)
-
-        // =================== 关于与隐私 ===================
-        root.addView(section("关于与隐私"))
-        val aboutCard = card()
-        aboutCard.addView(text(
-            "这个 App 会读取你当前聊天窗口的文字，发给你自己配置的模型接口做判断和起草回复。作者不运营服务器，收不到你的数据。",
-            12f, sub))
-        aboutCard.addView(cardBtn("隐私政策") { openUrl(PRIVACY_URL) })
-        aboutCard.addView(cardBtn("开源仓库") { openUrl(REPO_URL) })
-        aboutCard.addView(text(versionLabel(), 11f, sub).apply { setPadding(0, dp(10), 0, dp(2)) })
-        root.addView(aboutCard)
-
-        // =================== 保存 ===================
-        root.addView(primaryBtn("保存全部设置") {
+        return {
             // Address wins over the pill: a preset HOST in the box means that
             // preset's provider (and so its path), whatever the pill last said.
             val judgeBaseTyped = judgeBaseEdit.text.toString().trim()
@@ -431,20 +457,7 @@ class SettingsActivity : AppCompatActivity() {
             prefs.visionKey = visionKeyEdit.text.toString()
             prefs.visionModel = visionModelEdit.text.toString().trim().ifBlank { Prefs.DEFAULT_VISION_MODEL }
 
-            prefs.relationship = relEdit.text.toString()   // blank stays blank, on purpose
-            prefs.whitelist = wlEdit.text.toString().split("\n")
-                .map { it.trim() }.filter { it.isNotEmpty() }.toSet()
-            prefs.autoAnalyze = (autoRow.tag as? Boolean) ?: true
-            prefs.ocrFallback = (ocrFallbackRow.tag as? Boolean) ?: true
-            prefs.ocrAutoAnalyze = (ocrAutoRow.tag as? Boolean) ?: false
-            prefs.contextEnabled = (ctxRow.tag as? Boolean) ?: false
-            prefs.contextHistoryCount =
-                ctxCountEdit.text.toString().trim().toIntOrNull()?.coerceIn(0, 100) ?: 30
-            prefs.overlayOpacity = seek.progress + 60
-            Toast.makeText(this, "已保存", Toast.LENGTH_SHORT).show()
-        })
-
-        setContentView(scroll)
+        }
     }
 
     // Held as fields because several test buttons read each other's key box.

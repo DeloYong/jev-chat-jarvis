@@ -9,13 +9,18 @@ import com.jev.probe.core.RankedReply
 import com.jev.probe.core.Score
 import com.jev.probe.core.kb.ChatContext
 import org.json.JSONObject
+import java.util.UUID
 
 /**
  * The Jev judgment route only: the 7 judgment questions in one call, and the
  * ranking question over already-drafted candidates. Reads judgeProvider /
  * judgeBaseUrl / judgeKey / judgeModel from [Prefs]; nothing generative here.
  */
-class JudgeClient(private val prefs: Prefs) {
+class JudgeClient(
+    private val prefs: Prefs,
+    /** Shared by every call of one analysis so the gateway bills it once (hosted mode only). */
+    private val analysisId: String = UUID.randomUUID().toString()
+) {
 
     /**
      * The 7 judgment questions (fast, ~1s). Errors are returned, not thrown.
@@ -44,7 +49,8 @@ class JudgeClient(private val prefs: Prefs) {
         } catch (e: Exception) {
             Log.w(TAG, "judge failed: ${e.message}")
             Analysis(null, null, null, null, null, null, null, emptyList(),
-                System.currentTimeMillis() - start, error = e.message ?: "判断接口请求失败")
+                System.currentTimeMillis() - start, error = e.message ?: "判断接口请求失败",
+                paywall = (e as? ApiException)?.isPaywall == true)
         }
     }
 
@@ -82,7 +88,9 @@ class JudgeClient(private val prefs: Prefs) {
         return try {
             send(JevQuestions.buildState(snapshot, relationship, background, history), questions)
         } catch (e: ApiException) {
-            if (enriched && e.status != null && e.status in 400..499) {
+            // 401/402/429 come from the hosted gateway's own gates, not from a body the
+            // provider disliked: a plain resend cannot change them.
+            if (enriched && e.status != null && e.status in 400..499 && e.status !in GATEWAY_GATES) {
                 Log.w(TAG, "judge HTTP ${e.status} with background/history; retrying plain")
                 send(JevQuestions.buildState(snapshot, relationship), questions)
             } else throw e
@@ -95,7 +103,8 @@ class JudgeClient(private val prefs: Prefs) {
             .put("model", prefs.judgeModel)
             .put("state", state)
             .put("questions", questions)
-        val resp = HttpJson.post(url, prefs.judgeKey, body, Route.JUDGE, HttpJson.headersFor(url))
+        val resp = HttpJson.post(url, prefs.judgeRouteKey(), body, Route.JUDGE,
+            HttpJson.headersFor(url) + prefs.cloudHeaders(analysisId))
         // No `answers` means the address does not speak the decisions protocol.
         // Returning an empty object here used to parse into seven nulls with
         // error == null, i.e. a 成功 that judged nothing.
@@ -127,5 +136,8 @@ class JudgeClient(private val prefs: Prefs) {
         return list.sortedByDescending { it.prob }
     }
 
-    companion object { private const val TAG = "JEVASSIST" }
+    companion object {
+        private const val TAG = "JEVASSIST"
+        private val GATEWAY_GATES = setOf(401, 402, 429)
+    }
 }

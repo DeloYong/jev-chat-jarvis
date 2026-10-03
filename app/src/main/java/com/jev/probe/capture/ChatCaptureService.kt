@@ -12,6 +12,7 @@ import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
 import com.jev.probe.capture.ocr.MlKitOcr
 import com.jev.probe.capture.ocr.OcrLine
+import com.jev.probe.billing.EntitlementRepo
 import com.jev.probe.capture.ocr.ScreenCapture
 import com.jev.probe.core.BubbleRect
 import com.jev.probe.core.ChatSnapshot
@@ -167,6 +168,11 @@ open class ChatCaptureService : AccessibilityService() {
     /** Only called on the main thread, including the context-completion callback. */
     private fun submitAnalysis(task: () -> Unit) {
         try { analysisTasks.add(worker.submit(task)) } catch (_: RejectedExecutionException) { }
+    }
+
+    /** Off the analysis queue on purpose: it must not be cancelled with a conversation switch. */
+    private fun refreshEntitlementAsync() {
+        Thread { EntitlementRepo.refreshQuietly(applicationContext, prefs) }.start()
     }
 
     private val debounce = Runnable { runAnalysis() }
@@ -390,7 +396,11 @@ open class ChatCaptureService : AccessibilityService() {
         // accepted the moment the session observes a different target.
         val manual = manualSession
         if (!isLive(manual, previous)) return
-        if (!prefs.hasKey()) { overlay?.showError("未设置判断接口密钥，去设置里填"); return }
+        if (!prefs.hasAccess()) {
+            overlay?.showError(if (com.jev.probe.BuildConfig.HOSTED_ONLY) "请先打开 App 首页，点「开始试用」"
+                else "未设置判断接口密钥，去设置里填")
+            return
+        }
         val token = session.begin() ?: return
         analyzing = true
         overlay?.showLoading()
@@ -418,8 +428,15 @@ open class ChatCaptureService : AccessibilityService() {
                     val judgment = client.judge(snapshot, rel, ctx)
                     main.post {
                         if (isLive(manual, token)) {
-                            if (judgment.error != null) overlay?.showError(judgment.error)
-                            else overlay?.showJudgment(judgment)
+                            if (judgment.paywall) {
+                                overlay?.showPaywall(judgment.error ?: "免费试用已结束")
+                                // Pull the fresh balance so the plan page opens with real numbers.
+                                refreshEntitlementAsync()
+                            } else if (judgment.error != null) {
+                                overlay?.showError(judgment.error)
+                                // A stale token (HTTP 401) heals itself via re-register on the next refresh.
+                                if (prefs.cloudActive()) refreshEntitlementAsync()
+                            } else overlay?.showJudgment(judgment)
                             completed()
                         }
                     }
