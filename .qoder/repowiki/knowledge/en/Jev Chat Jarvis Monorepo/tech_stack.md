@@ -1,0 +1,1 @@
+Gradle Kotlin DSL (8.7.3 Android Gradle Plugin, Kotlin 1.9.24) for the Android module; Python tooling and a static site generator for the other two children; all three share the repo's Gradle wrapper and JDK 17 requirement via `gradle.properties`.

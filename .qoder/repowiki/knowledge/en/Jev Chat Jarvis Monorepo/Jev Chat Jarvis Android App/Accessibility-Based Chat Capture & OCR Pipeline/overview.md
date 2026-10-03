@@ -1,0 +1,1 @@
+Android AccessibilityService that reads chat windows from QQ, WeChat, Feishu and X, falls back to ML Kit OCR on screenshots, and drives the floating analysis overlay.

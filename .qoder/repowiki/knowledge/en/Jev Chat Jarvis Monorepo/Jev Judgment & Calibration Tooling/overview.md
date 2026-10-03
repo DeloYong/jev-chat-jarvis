@@ -1,0 +1,1 @@
+Python tooling that defines the Jev judgment question set, calls the OpenRouter decisions API, and runs calibration against a labeled Chinese conversation dataset.

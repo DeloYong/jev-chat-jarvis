@@ -1,0 +1,1 @@
+Kotlin on Android with `androidx.appcompat.AppCompat`, `androidx.preference.PreferenceManager` for `Prefs`, Google ML Kit OCR (`com.google.mlkit:vision`), and raw `java.net.HttpURLConnection` for all HTTP calls.

@@ -1,0 +1,8 @@
+schema_version: 1
+module_path: site
+title: Jev 聊天助手官网站点
+scope:
+    - site/
+source_files: []
+depends_on: []
+related_to: []

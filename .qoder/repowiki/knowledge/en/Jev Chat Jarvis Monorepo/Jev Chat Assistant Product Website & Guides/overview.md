@@ -1,0 +1,1 @@
+Static product website and guide site for Jev Chat Assistant, serving a bilingual landing page with an animated demo plus generated how-to articles.

@@ -1,0 +1,8 @@
+Pure static site served by any HTTP server; no framework.
+
+- Root pages: `index.html` (Chinese), `en.html` (English mirror), `privacy.html`, plus `robots.txt`, `sitemap.xml`, `llms.txt`, `indexnow-key.txt`. Each page is fully crawlable HTML with its own `<html lang=...>` and `hreflang` pairs — i18n is not runtime-only.
+- Shared assets under `assets/` (favicon, og.png, apple-touch-icon, mp-qr.webp) and shared CSS/JS: `style.css`, `guide.css`, `i18n.js` (translation dictionary + DOM text swap), `main.js` (theme toggle, language redirect, star count, demo animation).
+- Content data source: `content/guides.json` drives the guide generator. `tools/build-guides.mjs` renders one `.html` per article × per language (`guides/<slug>.html`, `guides/<slug>.en.html`) from that JSON, including SEO metadata, schema.org Article + BreadcrumbList, and Umami tracking.
+- Additional Node tools in `tools/`: `build-discovery.mjs` (site discovery), `check-i18n.mjs` (verifies Chinese copy in HTML matches `i18n.js` keys), `submit-indexnow.mjs` (SEO submission).
+- Design documentation lives at `site/DESIGN.md` (visual language, info architecture, accessibility, old-version migration table); `MAINTAINING.md` covers maintenance procedures.
+- The `docs/` directory holds internal project docs (acceptance criteria, playbooks, v1.3 plan/checklist) and image assets (sponsors, group photos, QR codes) — separate from the public site but co-located for reference.

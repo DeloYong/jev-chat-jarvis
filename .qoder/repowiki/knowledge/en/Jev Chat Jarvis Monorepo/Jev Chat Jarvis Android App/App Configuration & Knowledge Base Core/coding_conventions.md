@@ -1,0 +1,6 @@
+- SharedPreferences-backed values are exposed as Kotlin properties whose getters return defaults and setters write via `sp.edit().putX(...).apply()`, keeping key constants in a companion object.
+- All mutable state in `KbStore` is guarded by a single `synchronized(lock)` block around every public method, establishing a single-writer model over the JSON files.
+- File writes go through `writeAtomic`: serialize to a `.tmp` file then `renameTo` the target, falling back to in-place overwrite only if rename fails, so a crash cannot leave half-written documents.
+- Corrupt JSON files are moved aside with a `.corrupt.<timestamp>` suffix rather than silently overwritten, and their path is tracked in an `unreadable` set to prevent future writes.
+- Name/text normalization strips zero-width Unicode characters and trailing group-member counts like `(12)` / `（12）`, with regex patterns compiled lazily via `safeRegex` to avoid class-initializer crashes.
+- Sensitive strings (API keys, tokens) are never logged; only their lengths or presence are emitted to logcat.

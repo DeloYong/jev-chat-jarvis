@@ -1,0 +1,8 @@
+Layered around a single `ChatCaptureService` (an `AccessibilityService`) that owns the event loop, session state, OCR pipeline and overlay coordination:
+- Per-app parsing is isolated behind the `ChatAppAdapter` interface in `ChatAppAdapter.kt`; concrete adapters (`WeChatAdapter`, `QQAdapter`, `FeishuAdapter`, `XAdapter`) each implement `extract(root, resources)` returning a neutral `ChatSnapshot`. The service never inspects app-specific ids directly.
+- `ConversationSession` provides a revisioned `Token`/`Target` pair so background analysis callbacks can detect conversation switches without shared mutable state leaking across tasks.
+- Pure decision logic (excluded foregrounds, manual-block reasons, id inventory for diagnostics) lives in the `CaptureRules` object, decoupled from the service.
+- Two capture paths converge on `runAnalysis`: the fast path reads message text via adapters; when the tree yields no text (Feishu draws bodies, WeChat strips it), `ScreenCapture` + `MlKitOcr` take a screenshot and OCR either per-bubble rects or the whole screen.
+- Input filling goes through `GuardedInputWriter`, a retry chain of SET_TEXT → focus+retry → clear+PASTE with clipboard fallback, all re-resolving the live input node before each step.
+- `KeepAliveService` is a separate foreground Service started to keep the process alive against MIUI/HyperOS Greezer.
+- Dependency direction: this module depends outward on `core` (ChatSnapshot, Msg, Prefs, BubbleRect), `billing.EntitlementRepo`, `jev.JevClient`, `overlay.OverlayController`, and `core.kb.KbStore`; nothing inside the module depends on those packages' internals beyond their public APIs.

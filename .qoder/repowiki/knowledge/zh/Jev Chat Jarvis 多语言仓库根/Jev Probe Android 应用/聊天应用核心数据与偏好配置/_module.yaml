@@ -1,0 +1,9 @@
+schema_version: 1
+module_path: android_app/knowledge_base_core
+title: 聊天应用核心数据与偏好配置
+scope:
+    - app/src/main/java/com/jev/probe/core/
+source_files: []
+depends_on: []
+related_to:
+    - path: android_app/ui_and_overlay

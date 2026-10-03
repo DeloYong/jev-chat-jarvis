@@ -1,0 +1,8 @@
+schema_version: 1
+module_path: python_tools
+title: Jev 判断层题目集与校准工具
+scope:
+    - tools/jev/
+source_files: []
+depends_on: []
+related_to: []

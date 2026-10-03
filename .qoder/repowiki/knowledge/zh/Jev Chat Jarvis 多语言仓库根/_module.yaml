@@ -1,0 +1,21 @@
+schema_version: 1
+module_path: ""
+title: Jev Chat Jarvis 多语言仓库根
+scope:
+    - README.md
+    - CLAUDE.md
+    - CONTRIBUTORS.md
+    - PRIVACY.md
+    - .gitignore
+    - build.gradle.kts
+    - gradle.properties
+    - settings.gradle.kts
+    - gradlew.bat
+    - gradle/
+    - CHANGELOG.md
+    - LICENSE
+    - NOTICE
+    - gradlew
+source_files: []
+depends_on: []
+related_to: []

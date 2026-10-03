@@ -1,0 +1,11 @@
+schema_version: 1
+module_path: android_app/ui_shell
+title: Android App UI Shell (Home, Settings & Knowledge)
+scope:
+    - app/src/main/java/com/jev/probe/MainActivity.kt
+    - app/src/main/java/com/jev/probe/SettingsActivity.kt
+    - app/src/main/java/com/jev/probe/KnowledgeActivity.kt
+source_files: []
+depends_on: []
+related_to:
+    - path: android_app/capture

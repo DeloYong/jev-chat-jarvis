@@ -1,0 +1,6 @@
+- Node-tree traversal uses an explicit `ArrayDeque` stack with a bounded `guard++` counter (typically 400–6000) to avoid infinite loops on malformed trees.
+- Per-app adapter implementations are registered by package name in a list keyed by `pkg` and selected via `adapters[pkg]`, keeping the service code free of app-specific branches.
+- Background work is submitted through private `submit` / `submitAnalysis` helpers that swallow `RejectedExecutionException`, because the worker may be shut down while callbacks fire.
+- Liveness of a captured conversation is checked via `ConversationSession.Token` + `isLive(manual, token)` before every callback, rather than relying on flags alone.
+- User-facing error messages are produced through `ManualBlock` enum values (with optional Chinese `message`) and surfaced via `overlay.showError` / `overlay.toast`, keeping strings out of business logic.
+- Screenshot/OCR calls are gated by both an `ocrBusy` flag and an `ocrSignature` dedupe key derived from title + bubble rectangle coordinates, preventing repeated shots on transient redraws.

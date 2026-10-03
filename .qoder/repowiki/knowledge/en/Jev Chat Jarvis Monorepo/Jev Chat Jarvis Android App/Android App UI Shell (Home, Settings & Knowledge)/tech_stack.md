@@ -1,0 +1,1 @@
+Pure Kotlin `AppCompatActivity` with programmatic `LinearLayout`/`TextView`/`EditText` views built at runtime (no XML layouts); uses `GradientDrawable` for rounded cards/pills, `AlertDialog` for confirmations, and `androidx.appcompat` components.

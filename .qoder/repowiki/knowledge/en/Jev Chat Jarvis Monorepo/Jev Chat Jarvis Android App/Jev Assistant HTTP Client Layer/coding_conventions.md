@@ -1,0 +1,6 @@
+- Every network call goes through `HttpJson.post`/`get`, which normalizes failures into `ApiException(route, status, snippet, retryable)` rather than propagating raw IO exceptions.
+- Response bodies are validated through `ResponseShape` helpers (`ok`, `chatContent`, `jevAnswers`, `threeCandidates`) that throw non-retryable `ApiException` on malformed or semantically failed payloads instead of returning empty stand-ins.
+- Per-route error labeling is done via the `Route` object constants (`JUDGE`, `REPLY`, `VISION`, `CLOUD`) passed as the `route` argument to `HttpJson.post`, never string literals.
+- Provider configuration (base URL, key, model) is read from `Prefs` at call time inside each client, so changing settings takes effect on the next request without reconstructing clients.
+- The hosted gateway's billing `analysisId` is generated once per `JevClient` instance and forwarded to sub-clients via `prefs.cloudHeaders(analysisId)` appended to request headers.
+- Prompt/question definitions live in `JevQuestions` as JSON builders mirroring `tools/jev/questions.py`, keeping instruction text separate from transport logic.

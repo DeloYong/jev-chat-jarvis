@@ -1,0 +1,6 @@
+The package `com.jev.probe` is the Android application root that composes four child layers around a single `core.Prefs` (SharedPreferences) contract:
+- `ui_shell` (`MainActivity`, `SettingsActivity`, `KnowledgeActivity`) owns the user-facing Activities and reads/writes `Prefs` to drive the master toggle, cloud mode, and knowledge-base editor.
+- `capture` provides an `AccessibilityService` (`ChatCaptureService`) plus a `KeepAliveService`; it consumes `core.kb.KbStore` for context and renders results through `overlay.OverlayController` as a floating window.
+- `jev_client` exposes `JevClient`/`JudgeClient`/`ReplyClient`/`VisionClient` over `HttpURLConnection` JSON; both the capture pipeline and the billing flow in `billing/` call these clients.
+- `billing` (`EntitlementRepo`, `PlanActivity`) is the hosted-mode entry point gated by `Prefs.cloudEnabled/cloudConsent` and invoked from `MainActivity`.
+Cross-child wiring is stateless: children never import each other directly — they communicate through `Prefs` keys and through the `ChatModels` / `KbModels` data classes defined in `core`. The only runtime bootstrap is the Android manifest registering the two Services and three Activities; there is no DI container or central orchestrator class.

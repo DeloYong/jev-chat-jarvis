@@ -1,0 +1,1 @@
+Android `SharedPreferences` for config; `java.io.File` + `org.json` for the knowledge-base JSON files; no Gson/Moshi dependency. Hosted gateway URL is injected at build time via Gradle `-PjevCloudBase=` and exposed through `BuildConfig.CLOUD_BASE_URL`.

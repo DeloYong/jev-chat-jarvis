@@ -1,0 +1,1 @@
+Android AccessibilityService for UI introspection, Google ML Kit for OCR (`MlKitOcr`), foreground Service for process liveness on MIUI/HyperOS, Kotlin coroutines-free concurrency via `java.util.concurrent.Executors` fixed thread pool plus `Handler(Looper.getMainLooper())` for main-thread posting.

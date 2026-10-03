@@ -1,0 +1,4 @@
+- Persistent settings are accessed exclusively via the `core.Prefs` wrapper rather than direct `SharedPreferences` calls.
+- Background work (network, entitlement refresh, OCR) runs on a plain `Thread` and posts UI updates back onto the main thread via `runOnUiThread`.
+- User-visible strings are written in Chinese while code identifiers stay English, including toast messages and dialog titles.
+- Network errors are swallowed at the boundary and surfaced to users through `Toast` instead of propagating exceptions.

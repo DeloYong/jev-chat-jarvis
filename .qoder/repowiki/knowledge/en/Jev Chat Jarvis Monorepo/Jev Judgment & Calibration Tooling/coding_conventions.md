@@ -1,0 +1,6 @@
+- Scripts prepend their own directory to `sys.path` so they can import sibling modules (`jev_client`, `questions`) without installing the package.
+- Console output is wrapped with `sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')` at the top of each script to handle Chinese on Windows.
+- All secrets flowing to stdout or disk go through `redact_secrets()` rather than being printed directly.
+- API keys are read exclusively from the `OPENROUTER_API_KEY` environment variable; missing keys raise a descriptive error instead of falling back to defaults.
+- HTTP 429/529 responses are retried up to 3 times with exponential backoff (`time.sleep(2**attempt)`), while other errors surface as a `JevError` carrying the HTTP status code.
+- Every JSON file read or written uses explicit `encoding='utf-8'` to avoid CP936 corruption on Windows.

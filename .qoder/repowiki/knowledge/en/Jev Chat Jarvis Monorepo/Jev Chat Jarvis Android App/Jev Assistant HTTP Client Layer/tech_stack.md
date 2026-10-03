@@ -1,0 +1,1 @@
+Plain Java `HttpURLConnection` + `org.json.JSONObject/JSONArray` (no OkHttp/Retrofit); Android `Base64.NO_WRAP` and `Bitmap.CompressFormat.JPEG` for vision payloads; timeouts 15s connect / 40s read.

@@ -1,0 +1,10 @@
+Single-package Kotlin module under `com.jev.probe.jev` organized around one facade plus three route-specific clients sharing a common transport:
+- `HttpJson.kt` — low-level `object` providing `post`/`get` on `HttpURLConnection`, exponential backoff on 429/529, normalized `ApiException` with route labels from `Route`, gateway-error unwrapping (`{"gateway":true}`), and OpenRouter attribution headers.
+- `ResponseShape.kt` — response contract validators (`ok`, `chatContent`, `jevAnswers`, `threeCandidates`) that reject 2xx bodies carrying an embedded error or missing fields, throwing non-retryable `ApiException` so malformed responses surface to UI instead of silent success.
+- `JudgeClient` — `/alpha/decisions` style protocol: builds state + 7 fixed questions via `JevQuestions`, returns `Analysis`; includes a defensive retry that drops `background`/`history` fields when the live endpoint rejects them with 4xx.
+- `ReplyClient` — generic OpenAI-compatible `/chat/completions` for drafting 3 candidate replies and summarizing text; uses system+user messages.
+- `VisionClient` — image_url chat completions for screenshot OCR; encodes Bitmaps as JPEG base64 without line wraps.
+- `JevClient` — thin facade exposing `judge`, `draftAndRank`, and `analyze`; owns one `analysisId` UUID passed to both sub-clients so the hosted gateway bills all calls in one analysis unit.
+- `JevQuestions.kt` — immutable prompt/question definitions ported verbatim from `tools/jev/questions.py`, building the `state` + `questions` JSON payloads.
+
+Dependency direction is one-way: clients depend on `HttpJson` + `ResponseShape` + `JevQuestions`; they consume `com.jev.probe.core` domain types (`ChatSnapshot`, `Analysis`, `RankedReply`, `Prefs`, `ChatContext`) but expose no Android APIs beyond what those types require. Configuration (base URLs, keys, models) comes exclusively from `Prefs`.

@@ -1,0 +1,9 @@
+schema_version: 1
+module_path: android_app/jev_client
+title: Jev Assistant HTTP Client Layer
+scope:
+    - app/src/main/java/com/jev/probe/jev/
+source_files: []
+depends_on: []
+related_to:
+    - path: python_tooling

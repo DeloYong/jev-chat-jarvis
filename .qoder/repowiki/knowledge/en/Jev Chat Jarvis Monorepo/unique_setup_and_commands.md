@@ -1,0 +1,1 @@
+Build the Android app with `./gradlew assembleDebug` from the repo root; Python tooling in `tools/` and the site in `site/` are built/run independently of Gradle.

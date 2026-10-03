@@ -1,0 +1,9 @@
+schema_version: 1
+module_path: docs_site
+title: Jev Chat Assistant Product Website & Guides
+scope:
+    - site/
+    - docs/
+source_files: []
+depends_on: []
+related_to: []

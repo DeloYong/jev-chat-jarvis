@@ -1,0 +1,6 @@
+- UI is built entirely in code: each Activity constructs a root `ScrollView` + vertical `LinearLayout`, applies `dp()`-scaled padding, and calls `container.padForSystemBars()` for edge-to-edge layout.
+- A shared visual vocabulary is implemented as private helper methods (`card()`, `text()`, `label()`, `edit()`, `round()`, `toggleRow()`, `pills()`) that return styled `View`s, reused across all three Activities.
+- Colors are centralized per Activity as `accent`, `ink`, `sub`, `pillOff`, `red` constants parsed from hex strings, giving consistent theming without stylesheets.
+- Long-running work (API probes, entitlement refresh) runs on background threads (`Thread { ... }` or `Executors.newSingleThreadExecutor`) and posts UI updates back to the main thread via `runOnUiThread` / `Handler(Looper.getMainLooper()).post`.
+- External URLs are opened through a shared `openUrl()` helper that wraps `startActivity(Intent.ACTION_VIEW, ...)` in `runCatching` and shows a fallback Toast instead of crashing.
+- User-facing text is written in Simplified Chinese directly in the source (titles, hints, dialog messages, section labels).

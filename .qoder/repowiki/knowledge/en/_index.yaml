@@ -1,0 +1,108 @@
+# 知识卡导出索引文件
+schema_version: 1
+locale: en-US
+branch: my-work
+nodes_managed: true
+exported_at: "2026-10-02T03:52:49Z"
+modules:
+    "":
+        dir_name: Jev Chat Jarvis Monorepo
+        title: Jev Chat Jarvis Monorepo
+        scope:
+            - README.md
+            - CLAUDE.md
+            - CONTRIBUTORS.md
+            - .gitignore
+            - build.gradle.kts
+            - gradle.properties
+            - settings.gradle.kts
+            - gradlew.bat
+            - gradle/
+            - CHANGELOG.md
+            - LICENSE
+            - NOTICE
+            - PRIVACY.md
+            - gradlew
+        source_files: []
+        children:
+            - android_app
+            - docs_site
+            - python_tooling
+        depends_on: []
+        related_to: []
+    android_app:
+        dir_name: Jev Chat Jarvis Android App
+        title: Jev Chat Jarvis Android App
+        scope:
+            - app/src/main/java/com/jev/probe/
+        source_files: []
+        children:
+            - android_app/capture
+            - android_app/core
+            - android_app/jev_client
+            - android_app/ui_shell
+        depends_on: []
+        related_to: []
+    android_app/capture:
+        dir_name: Accessibility-Based Chat Capture & OCR Pipeline
+        title: Accessibility-Based Chat Capture & OCR Pipeline
+        scope:
+            - app/src/main/java/com/jev/probe/capture/
+        source_files: []
+        children: []
+        depends_on: []
+        related_to:
+            - path: android_app/core
+            - path: android_app/ui_shell
+    android_app/core:
+        dir_name: App Configuration & Knowledge Base Core
+        title: App Configuration & Knowledge Base Core
+        scope:
+            - app/src/main/java/com/jev/probe/core/
+        source_files: []
+        children: []
+        depends_on: []
+        related_to:
+            - path: android_app/capture
+    android_app/jev_client:
+        dir_name: Jev Assistant HTTP Client Layer
+        title: Jev Assistant HTTP Client Layer
+        scope:
+            - app/src/main/java/com/jev/probe/jev/
+        source_files: []
+        children: []
+        depends_on: []
+        related_to:
+            - path: python_tooling
+    android_app/ui_shell:
+        dir_name: Android App UI Shell (Home, Settings & Knowledge)
+        title: Android App UI Shell (Home, Settings & Knowledge)
+        scope:
+            - app/src/main/java/com/jev/probe/MainActivity.kt
+            - app/src/main/java/com/jev/probe/SettingsActivity.kt
+            - app/src/main/java/com/jev/probe/KnowledgeActivity.kt
+        source_files: []
+        children: []
+        depends_on: []
+        related_to:
+            - path: android_app/capture
+    docs_site:
+        dir_name: Jev Chat Assistant Product Website & Guides
+        title: Jev Chat Assistant Product Website & Guides
+        scope:
+            - site/
+            - docs/
+        source_files: []
+        children: []
+        depends_on: []
+        related_to: []
+    python_tooling:
+        dir_name: Jev Judgment & Calibration Tooling
+        title: Jev Judgment & Calibration Tooling
+        scope:
+            - tools/jev/
+        source_files: []
+        children: []
+        depends_on: []
+        related_to:
+            - path: android_app/jev_client

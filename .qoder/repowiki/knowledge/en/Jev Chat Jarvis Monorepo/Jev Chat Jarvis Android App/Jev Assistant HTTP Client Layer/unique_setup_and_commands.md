@@ -1,0 +1,1 @@
+None — pure library code consumed by the app; no build scripts or test harnesses in this scope.

@@ -1,0 +1,1 @@
+HTTP client layer that calls the Jev assistant's three API routes (judge, reply, vision) over a shared HttpURLConnection-based JSON transport with retry and error normalization.

@@ -1,0 +1,1 @@
+Pure Python standard library only (`urllib.request`, `json`, `argparse`, `pathlib`); no third-party dependencies. Calls the OpenRouter Alpha Decisions API (`typesafe/jev-1.13`).

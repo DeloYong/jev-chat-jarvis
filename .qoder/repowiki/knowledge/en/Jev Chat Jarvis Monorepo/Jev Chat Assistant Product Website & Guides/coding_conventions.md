@@ -1,0 +1,6 @@
+- Every user-visible string is keyed in `i18n.js` and referenced in HTML via `data-i18n="key"`; attributes are bound with `data-i18n-attr="attr:key"` so both content and ARIA labels switch with language.
+- Each page ships as a complete, crawlable HTML document with its own `<html lang=...>`, canonical URL, `hreflang` alternates, OG/Twitter meta, and JSON-LD — i18n is achieved by mirroring full pages rather than client-side SPA routing.
+- External links use `target="_blank" rel="noopener"` and carry `data-umami-event` / `data-umami-event-pos` / `data-umami-event-intent` attributes for event tracking instead of inline `onclick` handlers.
+- SVG icons are defined once in a hidden `<svg class="sprite">` block as `<symbol>` elements and reused via `<use href="#i-<name>"/>`, keeping icon markup DRY across pages.
+- Generated guide pages follow a fixed template produced by `build-guides.mjs`: header with brand + nav, article body, CTA aside pointing to GitHub, related-links aside, and footer — new articles only add entries to `content/guides.json`.
+- Version numbers for Android/Windows/macOS are written directly in the HTML alongside platform cards and the closing banner, kept in sync with release notes rather than fetched at runtime.

@@ -1,0 +1,2 @@
+- Project-wide Gradle settings (AndroidX, non-transitive R class, parallel/cached builds, Kotlin code style) are declared once in the root `gradle.properties` and inherited by the `:app` module.
+- Child modules are organized as sibling directories (`app/`, `tools/`, `site/`) rather than Gradle subprojects, so cross-language boundaries are enforced by directory layout instead of build configuration.

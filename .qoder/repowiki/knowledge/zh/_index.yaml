@@ -1,0 +1,104 @@
+# 知识卡导出索引文件
+schema_version: 1
+locale: zh-CN
+branch: my-work
+nodes_managed: true
+exported_at: "2026-10-02T03:14:47Z"
+modules:
+    "":
+        dir_name: Jev Chat Jarvis 多语言仓库根
+        title: Jev Chat Jarvis 多语言仓库根
+        scope:
+            - README.md
+            - CLAUDE.md
+            - CONTRIBUTORS.md
+            - PRIVACY.md
+            - .gitignore
+            - build.gradle.kts
+            - gradle.properties
+            - settings.gradle.kts
+            - gradlew.bat
+            - gradle/
+            - CHANGELOG.md
+            - LICENSE
+            - NOTICE
+            - gradlew
+        source_files: []
+        children:
+            - android_app
+            - python_tools
+            - site
+        depends_on: []
+        related_to: []
+    android_app:
+        dir_name: Jev Probe Android 应用
+        title: Jev Probe Android 应用
+        scope:
+            - app/
+        source_files: []
+        children:
+            - android_app/capture_ocr_pipeline
+            - android_app/jev_api_clients
+            - android_app/knowledge_base_core
+            - android_app/ui_and_overlay
+        depends_on: []
+        related_to: []
+    android_app/capture_ocr_pipeline:
+        dir_name: 聊天应用无障碍捕获与 OCR 分析管线
+        title: 聊天应用无障碍捕获与 OCR 分析管线
+        scope:
+            - app/src/main/java/com/jev/probe/capture/
+        source_files: []
+        children: []
+        depends_on: []
+        related_to:
+            - path: android_app/jev_api_clients
+    android_app/jev_api_clients:
+        dir_name: Jev 对话分析 API 客户端
+        title: Jev 对话分析 API 客户端
+        scope:
+            - app/src/main/java/com/jev/probe/jev/
+        source_files: []
+        children: []
+        depends_on: []
+        related_to:
+            - path: android_app/capture_ocr_pipeline
+    android_app/knowledge_base_core:
+        dir_name: 聊天应用核心数据与偏好配置
+        title: 聊天应用核心数据与偏好配置
+        scope:
+            - app/src/main/java/com/jev/probe/core/
+        source_files: []
+        children: []
+        depends_on: []
+        related_to:
+            - path: android_app/ui_and_overlay
+    android_app/ui_and_overlay:
+        dir_name: 悬浮窗 UI 与主_设置页面
+        title: 悬浮窗 UI 与主/设置页面
+        scope:
+            - app/src/main/java/com/jev/probe/overlay/
+            - app/src/main/java/com/jev/probe/
+        source_files: []
+        children: []
+        depends_on: []
+        related_to:
+            - path: android_app/knowledge_base_core
+    python_tools:
+        dir_name: Jev 判断层题目集与校准工具
+        title: Jev 判断层题目集与校准工具
+        scope:
+            - tools/jev/
+        source_files: []
+        children: []
+        depends_on: []
+        related_to: []
+    site:
+        dir_name: Jev 聊天助手官网站点
+        title: Jev 聊天助手官网站点
+        scope:
+            - site/
+        source_files: []
+        children: []
+        depends_on: []
+        related_to: []

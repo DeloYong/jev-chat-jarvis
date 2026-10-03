@@ -1,0 +1,10 @@
+schema_version: 1
+module_path: android_app/ui_and_overlay
+title: 悬浮窗 UI 与主/设置页面
+scope:
+    - app/src/main/java/com/jev/probe/overlay/
+    - app/src/main/java/com/jev/probe/
+source_files: []
+depends_on: []
+related_to:
+    - path: android_app/knowledge_base_core

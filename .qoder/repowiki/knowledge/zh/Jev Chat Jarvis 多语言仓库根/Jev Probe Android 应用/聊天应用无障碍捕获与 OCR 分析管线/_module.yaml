@@ -1,0 +1,9 @@
+schema_version: 1
+module_path: android_app/capture_ocr_pipeline
+title: 聊天应用无障碍捕获与 OCR 分析管线
+scope:
+    - app/src/main/java/com/jev/probe/capture/
+source_files: []
+depends_on: []
+related_to:
+    - path: android_app/jev_api_clients

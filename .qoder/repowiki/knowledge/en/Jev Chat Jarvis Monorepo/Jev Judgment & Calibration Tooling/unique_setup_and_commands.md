@@ -1,0 +1,1 @@
+Requires `export OPENROUTER_API_KEY=<key>` before running. Smoke test: `python tools/jev/demo_meme.py`. Full calibration: `python tools/jev/calibrate.py [--limit N]`. A separate probe script exists for wire-format experiments: `python tools/jev/probe_background_field.py`.

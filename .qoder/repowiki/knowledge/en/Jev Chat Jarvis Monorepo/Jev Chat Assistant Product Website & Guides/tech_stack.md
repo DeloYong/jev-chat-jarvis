@@ -1,0 +1,1 @@
+Vanilla HTML5 + CSS custom properties + ES modules; Google Fonts Figtree (Latin subset, non-blocking via `media="print" onload`); Umami analytics; Schema.org JSON-LD (`SoftwareApplication`, `Article`, `BreadcrumbList`); OpenAPI-compatible model endpoints configured by users at runtime.
