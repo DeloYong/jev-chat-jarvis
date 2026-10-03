@@ -1,0 +1,1 @@
+Android app configuration via SharedPreferences and a file-backed JSON knowledge base (notes, contacts, per-contact chat history) consumed by the analysis pipeline.

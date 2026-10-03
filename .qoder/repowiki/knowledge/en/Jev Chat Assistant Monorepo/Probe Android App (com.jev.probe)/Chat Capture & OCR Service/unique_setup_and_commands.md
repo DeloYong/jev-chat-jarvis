@@ -1,0 +1,1 @@
+The service is registered under a disguised class name (SelectToSpeakService) so WeChat exposes its obfuscated node tree; enabling it requires Android Accessibility permissions and the `KeepAliveService` must be running to survive MIUI/HyperOS aggressive memory reclamation.

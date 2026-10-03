@@ -3,11 +3,11 @@ schema_version: 1
 locale: en-US
 branch: my-work
 nodes_managed: true
-exported_at: "2026-10-02T03:52:49Z"
+exported_at: "2026-10-03T03:43:58Z"
 modules:
     "":
-        dir_name: Jev Chat Jarvis Monorepo
-        title: Jev Chat Jarvis Monorepo
+        dir_name: Jev Chat Assistant Monorepo
+        title: Jev Chat Assistant Monorepo
         scope:
             - README.md
             - CLAUDE.md
@@ -31,39 +31,49 @@ modules:
         depends_on: []
         related_to: []
     android_app:
-        dir_name: Jev Chat Jarvis Android App
-        title: Jev Chat Jarvis Android App
+        dir_name: Probe Android App (com.jev.probe)
+        title: Probe Android App (com.jev.probe)
         scope:
             - app/src/main/java/com/jev/probe/
         source_files: []
         children:
+            - android_app/billing
             - android_app/capture
             - android_app/core
             - android_app/jev_client
             - android_app/ui_shell
         depends_on: []
         related_to: []
+    android_app/billing:
+        dir_name: Hosted Billing & Entitlement UI
+        title: Hosted Billing & Entitlement UI
+        scope:
+            - app/src/main/java/com/jev/probe/billing/
+            - app/src/test/java/com/jev/probe/core/HostedPolicyTest.kt
+        source_files: []
+        children: []
+        depends_on: []
+        related_to:
+            - path: android_app/jev_client
     android_app/capture:
-        dir_name: Accessibility-Based Chat Capture & OCR Pipeline
-        title: Accessibility-Based Chat Capture & OCR Pipeline
+        dir_name: Chat Capture & OCR Service
+        title: Chat Capture & OCR Service
         scope:
             - app/src/main/java/com/jev/probe/capture/
         source_files: []
         children: []
         depends_on: []
         related_to:
-            - path: android_app/core
-            - path: android_app/ui_shell
+            - path: android_app/jev_client
     android_app/core:
-        dir_name: App Configuration & Knowledge Base Core
-        title: App Configuration & Knowledge Base Core
+        dir_name: App Configuration & Local Knowledge Base
+        title: App Configuration & Local Knowledge Base
         scope:
             - app/src/main/java/com/jev/probe/core/
         source_files: []
         children: []
         depends_on: []
-        related_to:
-            - path: android_app/capture
+        related_to: []
     android_app/jev_client:
         dir_name: Jev Assistant HTTP Client Layer
         title: Jev Assistant HTTP Client Layer
@@ -73,10 +83,13 @@ modules:
         children: []
         depends_on: []
         related_to:
+            - path: android_app/billing
+            - path: android_app/capture
+            - path: android_app/ui_shell
             - path: python_tooling
     android_app/ui_shell:
-        dir_name: Android App UI Shell (Home, Settings & Knowledge)
-        title: Android App UI Shell (Home, Settings & Knowledge)
+        dir_name: App Shell Activities (Home, Settings, Knowledge Base)
+        title: App Shell Activities (Home, Settings, Knowledge Base)
         scope:
             - app/src/main/java/com/jev/probe/MainActivity.kt
             - app/src/main/java/com/jev/probe/SettingsActivity.kt
@@ -85,7 +98,7 @@ modules:
         children: []
         depends_on: []
         related_to:
-            - path: android_app/capture
+            - path: android_app/jev_client
     docs_site:
         dir_name: Jev Chat Assistant Product Website & Guides
         title: Jev Chat Assistant Product Website & Guides

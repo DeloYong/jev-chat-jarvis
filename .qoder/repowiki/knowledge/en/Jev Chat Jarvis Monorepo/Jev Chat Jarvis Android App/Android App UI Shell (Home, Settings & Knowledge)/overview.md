@@ -1,1 +1,0 @@
-Top-level Android Activities that present the app's home screen, API/analysis settings, and the local knowledge-base manager for notes and contacts.

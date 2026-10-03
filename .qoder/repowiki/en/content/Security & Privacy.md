@@ -8,6 +8,7 @@
 - [MlKitOcr.kt](file://app/src/main/java/com/jev/probe/capture/ocr/MlKitOcr.kt)
 - [OcrEngine.kt](file://app/src/main/java/com/jev/probe/capture/ocr/OcrEngine.kt)
 - [Prefs.kt](file://app/src/main/java/com/jev/probe/core/Prefs.kt)
+- [HostedPolicy.kt](file://app/src/main/java/com/jev/probe/core/HostedPolicy.kt)
 - [KbStore.kt](file://app/src/main/java/com/jev/probe/core/kb/KbStore.kt)
 - [JevClient.kt](file://app/src/main/java/com/jev/probe/jev/JevClient.kt)
 - [VisionClient.kt](file://app/src/main/java/com/jev/probe/jev/VisionClient.kt)
@@ -15,6 +16,14 @@
 - [SettingsActivity.kt](file://app/src/main/java/com/jev/probe/SettingsActivity.kt)
 - [privacy.html](file://site/privacy.html)
 </cite>
+
+## Update Summary
+**Changes Made**
+- Updated privacy policy compliance section to reflect v1.2 with Section 2A for hosted mode
+- Added detailed explanation of BYOK vs hosted operational modes with distinct data collection practices
+- Enhanced security considerations around HostedPolicy enforcement and BYOK key wiping
+- Updated data flow diagrams to show gateway routing for hosted mode
+- Expanded user controls documentation for hosted mode consent and data management
 
 ## Table of Contents
 1. [Introduction](#introduction)
@@ -28,14 +37,14 @@
 9. [Conclusion](#conclusion)
 
 ## Introduction
-This document explains the security and privacy design of the Android assistant app, focusing on its privacy-first architecture: OCR runs locally on the device, sensitive data remains in app-private storage, API keys are stored securely, and user controls govern what is processed locally versus sent to external AI providers. It also covers Android accessibility permissions, sandbox isolation, consent for hosted mode, third-party provider responsibilities, and user-facing data management features such as knowledge base cleanup, chat history retention, and complete data removal.
+This document explains the security and privacy design of the Android assistant app, focusing on its privacy-first architecture: OCR runs locally on the device, sensitive data remains in app-private storage, API keys are stored securely, and user controls govern what is processed locally versus sent to external AI providers. The app supports two distinct operational modes with different privacy implications: bring-your-own-key (BYOK) mode where users configure their own endpoints, and official hosted mode where requests route through an operator's gateway after explicit consent. It also covers Android accessibility permissions, sandbox isolation, consent mechanisms, third-party provider responsibilities, and user-facing data management features such as knowledge base cleanup, chat history retention, and complete data removal.
 
 ## Project Structure
 The security-relevant code spans capture services, OCR, local storage, configuration, network clients, and settings UI. The key files are:
 
 - Capture and overlay: `ChatCaptureService`, `ScreenCapture`, `GuardedInputWriter`
 - OCR engine: `OcrEngine`, `MlKitOcr`
-- Configuration and secrets: `Prefs`
+- Configuration and secrets: `Prefs`, `HostedPolicy`
 - Local knowledge and history: `KbStore`
 - External AI integration: `JevClient`, `VisionClient`
 - User controls and policy link: `SettingsActivity`
@@ -48,10 +57,12 @@ Manifest["AndroidManifest.xml<br/>Permissions & services"] --> Capture["ChatCapt
 Capture --> ScreenCap["ScreenCapture.kt<br/>Local screenshot throttling"]
 Capture --> MlKit["MlKitOcr.kt<br/>On-device OCR"]
 Capture --> Prefs["Prefs.kt<br/>API keys & switches"]
+Capture --> Hosted["HostedPolicy.kt<br/>Mode enforcement"]
 Capture --> Kb["KbStore.kt<br/>Local notes, contacts, logs"]
 Capture --> Jev["JevClient.kt<br/>Judge + reply orchestration"]
 Capture --> Vision["VisionClient.kt<br/>Optional vision endpoint"]
 Settings["SettingsActivity.kt<br/>User controls & policy link"] --> Prefs
+Settings --> Hosted
 Settings --> Kb
 Manifest --> Overlay["OverlayController (UI)<br/>Not shown here"]
 ```
@@ -62,6 +73,7 @@ Manifest --> Overlay["OverlayController (UI)<br/>Not shown here"]
 - [ScreenCapture.kt:14-34](file://app/src/main/java/com/jev/probe/capture/ocr/ScreenCapture.kt#L14-L34)
 - [MlKitOcr.kt:13-25](file://app/src/main/java/com/jev/probe/capture/ocr/MlKitOcr.kt#L13-L25)
 - [Prefs.kt:6-16](file://app/src/main/java/com/jev/probe/core/Prefs.kt#L6-L16)
+- [HostedPolicy.kt:7-18](file://app/src/main/java/com/jev/probe/core/HostedPolicy.kt#L7-L18)
 - [KbStore.kt:12-23](file://app/src/main/java/com/jev/probe/core/kb/KbStore.kt#L12-L23)
 - [JevClient.kt:9-18](file://app/src/main/java/com/jev/probe/jev/JevClient.kt#L9-L18)
 - [VisionClient.kt:10-25](file://app/src/main/java/com/jev/probe/jev/VisionClient.kt#L10-L25)
@@ -75,10 +87,13 @@ Manifest --> Overlay["OverlayController (UI)<br/>Not shown here"]
 ## Core Components
 This section summarizes the components that implement privacy and security.
 
-- **Privacy-first OCR**: Screenshot capture and text recognition run entirely on the device using ML Kit’s bundled Chinese recognizer. Screenshots are not uploaded; only recognized text may be used for analysis.
+- **Privacy-first OCR**: Screenshot capture and text recognition run entirely on the device using ML Kit's bundled Chinese recognizer. Screenshots are not uploaded; only recognized text may be used for analysis.
+- **Dual operational modes**: 
+  - **Bring-your-own-key (BYOK) mode**: Users configure their own model endpoints; no operator infrastructure involved
+  - **Official hosted mode**: Requests route through operator's gateway after explicit consent; requires valid token
 - **App-private storage**: API keys, endpoints, model names, relationship descriptions, conversation whitelist, knowledge-base notes, contacts, and optional per-contact chat history are stored in app-private SharedPreferences or under `filesDir/kb`.
-- **Controlled access patterns**: Only conversations matching the user’s whitelist are analyzed. Automatic analysis can be disabled so the assistant only acts when the user explicitly taps “Analyze.”
-- **External AI routing**: In bring-your-own-key mode, requests go directly to the user-configured provider. In hosted mode, a gateway forwards requests after explicit user consent.
+- **Controlled access patterns**: Only conversations matching the user's whitelist are analyzed. Automatic analysis can be disabled so the assistant only acts when the user explicitly taps "Analyze."
+- **External AI routing**: In BYOK mode, requests go directly to the user-configured provider. In hosted mode, a gateway forwards requests after explicit user consent with hashed identifiers and quota tracking.
 - **User controls**: Users can clear knowledge base and history, adjust history retention, change providers, enable/disable auto-analysis, and uninstall the app to remove all local data.
 
 **Section sources**
@@ -86,11 +101,12 @@ This section summarizes the components that implement privacy and security.
 - [Prefs.kt:6-16](file://app/src/main/java/com/jev/probe/core/Prefs.kt#L6-L16)
 - [Prefs.kt:135-174](file://app/src/main/java/com/jev/probe/core/Prefs.kt#L135-L174)
 - [Prefs.kt:218-271](file://app/src/main/java/com/jev/probe/core/Prefs.kt#L218-L271)
+- [HostedPolicy.kt:7-18](file://app/src/main/java/com/jev/probe/core/HostedPolicy.kt#L7-L18)
 - [KbStore.kt:12-23](file://app/src/main/java/com/jev/probe/core/kb/KbStore.kt#L12-L23)
 - [SettingsActivity.kt:341-357](file://app/src/main/java/com/jev/probe/SettingsActivity.kt#L341-L357)
 
 ## Architecture Overview
-The privacy architecture separates local processing from external AI calls.
+The privacy architecture separates local processing from external AI calls, with distinct routing paths for BYOK and hosted modes.
 
 ```mermaid
 sequenceDiagram
@@ -100,6 +116,7 @@ participant Screen as "ScreenCapture"
 participant OCR as "MlKitOcr"
 participant Store as "KbStore"
 participant Client as "JevClient"
+participant Route as "Prefs/HostedPolicy"
 participant Provider as "AI Provider / Gateway"
 User->>Service : Open chat app
 Service->>Service : Read accessibility tree
@@ -111,7 +128,12 @@ OCR-->>Service : Lines with screen coordinates
 end
 Service->>Store : Build context if enabled
 Service->>Client : Judge + draft + rank
-Client->>Provider : Send configured route
+Client->>Route : Resolve route (BYOK vs Hosted)
+alt BYOK Mode
+Route->>Provider : Direct to user endpoint
+else Hosted Mode
+Route->>Provider : Gateway forwarding
+end
 Provider-->>Client : Judgment + replies
 Client-->>Service : Results
 Service-->>User : Show overlay + fill input (user sends)
@@ -124,6 +146,8 @@ Service-->>User : Show overlay + fill input (user sends)
 - [MlKitOcr.kt:39-95](file://app/src/main/java/com/jev/probe/capture/ocr/MlKitOcr.kt#L39-L95)
 - [KbStore.kt:172-220](file://app/src/main/java/com/jev/probe/core/kb/KbStore.kt#L172-L220)
 - [JevClient.kt:22-42](file://app/src/main/java/com/jev/probe/jev/JevClient.kt#L22-L42)
+- [Prefs.kt:273-289](file://app/src/main/java/com/jev/probe/core/Prefs.kt#L273-L289)
+- [HostedPolicy.kt:7-18](file://app/src/main/java/com/jev/probe/core/HostedPolicy.kt#L7-L18)
 
 ## Detailed Component Analysis
 
@@ -171,6 +195,7 @@ Key protections include:
 - Optional hosted mode token treated like an API key.
 - Clear defaults and fallbacks without exposing secrets.
 - Endpoint builders that select provider-specific paths.
+- **BYOK key wiping**: In hosted-only builds, legacy BYOK keys are automatically removed during initialization to reduce attack surface.
 
 ```mermaid
 classDiagram
@@ -195,26 +220,37 @@ class Prefs {
 +String judgeRouteKey()
 +String replyRouteKey()
 +Map~String,String~ cloudHeaders(analysisId)
++Boolean hasAccess()
++Boolean hasKey()
 }
+class HostedPolicy {
++Boolean cloudActive(hostedOnly, enabled, available, token)
++Boolean gatewayRoute(hostedOnly, cloudActive)
++Boolean hasAccess(hostedOnly, cloudActive, ownJudgeKey)
+}
+Prefs --> HostedPolicy
 ```
 
 **Diagram sources**
 - [Prefs.kt:71-131](file://app/src/main/java/com/jev/probe/core/Prefs.kt#L71-L131)
 - [Prefs.kt:218-303](file://app/src/main/java/com/jev/probe/core/Prefs.kt#L218-L303)
+- [HostedPolicy.kt:7-18](file://app/src/main/java/com/jev/probe/core/HostedPolicy.kt#L7-L18)
 
 **Section sources**
 - [Prefs.kt:6-16](file://app/src/main/java/com/jev/probe/core/Prefs.kt#L6-L16)
 - [Prefs.kt:26-41](file://app/src/main/java/com/jev/probe/core/Prefs.kt#L26-L41)
 - [Prefs.kt:71-131](file://app/src/main/java/com/jev/probe/core/Prefs.kt#L71-L131)
 - [Prefs.kt:218-303](file://app/src/main/java/com/jev/probe/core/Prefs.kt#L218-L303)
+- [HostedPolicy.kt:7-18](file://app/src/main/java/com/jev/probe/core/HostedPolicy.kt#L7-L18)
 
 ### Controlled Data Access Patterns
 Access control is enforced at multiple layers:
 
-- **Whitelist filtering**: Only conversations whose titles match the user’s whitelist are analyzed.
+- **Whitelist filtering**: Only conversations whose titles match the user's whitelist are analyzed.
 - **Auto-analysis gate**: Automatic analysis only triggers when the latest message is from the other person and the auto-analyze switch is enabled.
 - **Session liveness**: The service validates that the current window still belongs to the expected conversation before writing input or continuing analysis.
 - **Manual write guard**: Input filling uses a guarded sequence that re-validates the live session and falls back to clipboard copy if the target changes.
+- **Hosted mode enforcement**: Subscription builds cannot use BYOK keys; only valid hosted tokens grant access.
 
 ```mermaid
 flowchart TD
@@ -226,38 +262,47 @@ Whitelist --> |No| Hide["Hide overlay"]
 Whitelist --> |Yes| Auto{"Auto analyze enabled<br/>and latest from other?"}
 Auto --> |No| Idle["Show idle bubble"]
 Auto --> |Yes| Analyze["Run judge + draft + rank"]
+Analyze --> ModeCheck{"Mode check"}
+ModeCheck --> |BYOK| OwnKey{"Has own key?"}
+ModeCheck --> |Hosted| HasToken{"Has valid token?"}
+OwnKey --> |No| Block["Block analysis"]
+OwnKey --> |Yes| Proceed["Proceed"]
+HasToken --> |No| Block
+HasToken --> |Yes| Proceed
 ```
 
 **Diagram sources**
 - [ChatCaptureService.kt:303-360](file://app/src/main/java/com/jev/probe/capture/ChatCaptureService.kt#L303-L360)
 - [ChatCaptureService.kt:704-763](file://app/src/main/java/com/jev/probe/capture/ChatCaptureService.kt#L704-L763)
 - [Prefs.kt:305-316](file://app/src/main/java/com/jev/probe/core/Prefs.kt#L305-L316)
+- [HostedPolicy.kt:15-17](file://app/src/main/java/com/jev/probe/core/HostedPolicy.kt#L15-L17)
 
 **Section sources**
 - [ChatCaptureService.kt:303-360](file://app/src/main/java/com/jev/probe/capture/ChatCaptureService.kt#L303-L360)
 - [ChatCaptureService.kt:704-763](file://app/src/main/java/com/jev/probe/capture/ChatCaptureService.kt#L704-L763)
 - [Prefs.kt:305-316](file://app/src/main/java/com/jev/probe/core/Prefs.kt#L305-L316)
+- [HostedPolicy.kt:15-17](file://app/src/main/java/com/jev/probe/core/HostedPolicy.kt#L15-L17)
 
 ### Privacy Policy Compliance
-The public privacy policy clarifies what leaves the device, where it goes, and how users retain control.
+The public privacy policy clarifies what leaves the device, where it goes, and how users retain control. Version 1.2 introduces explicit distinction between operational modes with Section 2A dedicated to hosted mode.
 
 Highlights:
-- Default mode sends chat text only to the user-configured model endpoint.
-- Hosted mode requires explicit consent and routes through the operator’s gateway.
-- Screenshots are not uploaded; OCR is local.
-- API keys, settings, knowledge base, and chat history remain on the device.
-- No ads, no third-party analytics SDKs, no cookies or advertising identifiers.
-- Third-party provider policies apply to the selected endpoints.
+- **BYOK mode**: Default mode sends chat text only to the user-configured model endpoint with no operator involvement.
+- **Hosted mode (Section 2A)**: Requires explicit consent and routes through the operator's gateway with detailed data collection practices including hashed identifiers, quota tracking, and order records.
+- **Screenshots are not uploaded**: OCR is local in both modes.
+- **API keys, settings, knowledge base, and chat history remain on the device**.
+- **No ads, no third-party analytics SDKs, no cookies or advertising identifiers**.
+- **Third-party provider policies apply to the selected endpoints**.
 
 ```mermaid
 flowchart TD
-Mode{"Mode"} --> BYOK["Bring Your Own Key"]
-Mode --> Hosted["Hosted Mode"]
-BYOK --> Direct["Send to user-configured endpoint"]
-Hosted --> Consent{"Explicit consent?"}
+Mode{"Operational Mode"} --> BYOK["Bring Your Own Key (BYOK)"]
+Mode --> Hosted["Official Hosted Mode"]
+BYOK --> Direct["Send to user-configured endpoint<br/>No operator involvement"]
+Hosted --> Consent{"Explicit consent required?"}
 Consent --> |No| Block["Do not use hosted mode"]
-Consent --> |Yes| Gateway["Send to operator gateway"]
-Gateway --> Provider["Gateway forwards to selected provider"]
+Consent --> |Yes| Gateway["Send to operator gateway<br/>with hashed identifiers"]
+Gateway --> Provider["Gateway forwards to selected provider<br/>with quota tracking"]
 ```
 
 **Diagram sources**
@@ -282,10 +327,11 @@ The app declares and uses specific Android permissions and services:
 - **BIND_ACCESSIBILITY_SERVICE**: Binds the accessibility service that reads the UI tree and optionally takes screenshots.
 
 Security implications:
-- The service is registered with a disguised class name to improve compatibility with certain chat apps while still being subject to Android’s accessibility permission model.
+- The service is registered with a disguised class name to improve compatibility with certain chat apps while still being subject to Android's accessibility permission model.
 - The app states it does not send messages automatically; the only write action is filling the input box, and the user must press send.
 - App-private storage isolates secrets and user data from other apps.
 - Uninstalling the app removes local data.
+- **Hosted mode security**: Subscription builds enforce gateway routing and prevent BYOK bypass through HostedPolicy validation.
 
 ```mermaid
 graph TB
@@ -298,20 +344,23 @@ AccSvc --> Shot["Optional screenshot"]
 FgSvc --> KeepAlive["Keep service alive"]
 Alert --> Overlay["Floating analysis panel"]
 Net --> Provider["AI provider or gateway"]
+Hosted["HostedPolicy enforcement"] --> Security["Security boundaries"]
 ```
 
 **Diagram sources**
 - [AndroidManifest.xml:4-8](file://app/src/main/AndroidManifest.xml#L4-L8)
 - [AndroidManifest.xml:38-57](file://app/src/main/AndroidManifest.xml#L38-L57)
 - [ChatCaptureService.kt:29-42](file://app/src/main/java/com/jev/probe/capture/ChatCaptureService.kt#L29-L42)
+- [HostedPolicy.kt:7-18](file://app/src/main/java/com/jev/probe/core/HostedPolicy.kt#L7-L18)
 
 **Section sources**
 - [AndroidManifest.xml:4-8](file://app/src/main/AndroidManifest.xml#L4-L8)
 - [AndroidManifest.xml:38-57](file://app/src/main/AndroidManifest.xml#L38-L57)
 - [ChatCaptureService.kt:29-42](file://app/src/main/java/com/jev/probe/capture/ChatCaptureService.kt#L29-L42)
+- [HostedPolicy.kt:7-18](file://app/src/main/java/com/jev/probe/core/HostedPolicy.kt#L7-L18)
 
 ### Data Flow: Local Processing vs External AI Providers
-The app processes screenshots and OCR locally, then optionally sends structured chat context to external endpoints.
+The app processes screenshots and OCR locally, then optionally sends structured chat context to external endpoints via either direct BYOK routing or hosted gateway forwarding.
 
 ```mermaid
 sequenceDiagram
@@ -319,17 +368,27 @@ participant Capture as "ChatCaptureService"
 participant OCR as "MlKitOcr"
 participant KB as "KbStore"
 participant Client as "JevClient"
-participant Route as "Prefs endpoints"
+participant Route as "Prefs/HostedPolicy"
 participant Network as "HTTP client"
 participant Provider as "AI provider"
+participant Gateway as "Operator Gateway"
 Capture->>OCR : Recognize screenshot locally
 OCR-->>Capture : Text lines
 Capture->>KB : Build context if enabled
 Capture->>Client : Judge + draft + rank
-Client->>Route : Resolve judge/reply/vision endpoints
-Client->>Network : POST with keys and payload
+Client->>Route : Resolve route (BYOK vs Hosted)
+alt BYOK Mode
+Route->>Network : Direct to user endpoint
 Network->>Provider : Request
 Provider-->>Network : Response
+else Hosted Mode
+Route->>Gateway : Forward with hashed ID
+Gateway->>Network : Request to provider
+Network->>Provider : Request
+Provider-->>Network : Response
+Network-->>Gateway : Response
+Gateway-->>Network : Forwarded response
+end
 Network-->>Client : Parsed result
 Client-->>Capture : Judgment + ranked replies
 ```
@@ -340,19 +399,22 @@ Client-->>Capture : Judgment + ranked replies
 - [KbStore.kt:172-220](file://app/src/main/java/com/jev/probe/core/kb/KbStore.kt#L172-L220)
 - [JevClient.kt:22-42](file://app/src/main/java/com/jev/probe/jev/JevClient.kt#L22-L42)
 - [Prefs.kt:281-303](file://app/src/main/java/com/jev/probe/core/Prefs.kt#L281-L303)
+- [HostedPolicy.kt:12-13](file://app/src/main/java/com/jev/probe/core/HostedPolicy.kt#L12-L13)
 
 **Section sources**
 - [ChatCaptureService.kt:389-455](file://app/src/main/java/com/jev/probe/capture/ChatCaptureService.kt#L389-L455)
 - [JevClient.kt:22-42](file://app/src/main/java/com/jev/probe/jev/JevClient.kt#L22-L42)
 - [Prefs.kt:281-303](file://app/src/main/java/com/jev/probe/core/Prefs.kt#L281-L303)
+- [HostedPolicy.kt:12-13](file://app/src/main/java/com/jev/probe/core/HostedPolicy.kt#L12-L13)
 
 ### User Controls for Data Management
 Users have explicit controls over data collection and retention:
 
 - **Knowledge base cleanup**: A one-tap option clears notes, contacts, and per-contact history under `filesDir/kb` without affecting API keys or other settings.
-- **Chat history retention**: History recording is opt-in by default. When enabled, each contact’s log is capped at a maximum number of entries.
+- **Chat history retention**: History recording is opt-in by default. When enabled, each contact's log is capped at a maximum number of entries.
 - **Complete data removal**: Uninstalling the app deletes all local data. For hosted mode, additional records may exist on the gateway side and require contacting the operator.
-- **Provider selection**: Users can choose among preset providers or supply a custom OpenAI-compatible endpoint.
+- **Provider selection**: Users can choose among preset providers or supply a custom OpenAI-compatible endpoint (BYOK mode only).
+- **Hosted mode consent**: Explicit consent required before enabling hosted mode; subscription builds provide no BYOK alternative.
 
 ```mermaid
 flowchart TD
@@ -360,8 +422,9 @@ Settings["SettingsActivity"] --> ToggleHistory["Toggle chat history recording"]
 Settings --> ClearKB["Clear knowledge base & history"]
 ClearKB --> KbStore["KbStore.clearAll()"]
 KbStore --> Files["Delete kb directory"]
-Settings --> ChangeProvider["Change judge/reply/vision endpoints"]
+Settings --> ChangeProvider["Change judge/reply/vision endpoints (BYOK only)"]
 Settings --> PrivacyLink["Open privacy policy"]
+Settings --> HostedConsent["Enable hosted mode (requires consent)"]
 ```
 
 **Diagram sources**
@@ -378,9 +441,10 @@ Settings --> PrivacyLink["Open privacy policy"]
 ### Third-Party Service Privacy Policies and User Responsibility
 The app delegates trust decisions to the selected provider:
 
-- In bring-your-own-key mode, the user chooses the endpoint and bears responsibility for reviewing that provider’s privacy policy.
-- In hosted mode, the operator’s gateway selects the provider and forwards requests; the app does not store chat bodies on the gateway but may store hashed identifiers, quota state, and order records.
+- In BYOK mode, the user chooses the endpoint and bears responsibility for reviewing that provider's privacy policy.
+- In hosted mode, the operator's gateway selects the provider and forwards requests; the app does not store chat bodies on the gateway but may store hashed identifiers, quota state, and order records.
 - The app does not integrate payment SDKs; payments occur on web pages operated by the payment platform.
+- **Subscription build restrictions**: No BYOK option available; hosted mode is mandatory with explicit consent requirements.
 
 ```mermaid
 flowchart TD
@@ -389,6 +453,7 @@ User --> Hosted["Hosted gateway"]
 BYOK --> ProviderPolicy["Provider privacy policy applies"]
 Hosted --> GatewayPolicy["Operator gateway policy applies"]
 GatewayPolicy --> ProviderPolicy
+SubBuild["Subscription build"] --> HostedOnly["Hosted mode only<br/>No BYOK option"]
 ```
 
 **Diagram sources**
@@ -410,11 +475,13 @@ Manifest["AndroidManifest.xml"] --> Capture["ChatCaptureService.kt"]
 Capture --> Screen["ScreenCapture.kt"]
 Capture --> OCR["MlKitOcr.kt"]
 Capture --> Prefs["Prefs.kt"]
+Capture --> Hosted["HostedPolicy.kt"]
 Capture --> Kb["KbStore.kt"]
 Capture --> Jev["JevClient.kt"]
 Capture --> Vision["VisionClient.kt"]
 Capture --> Guard["GuardedInputWriter.kt"]
 Settings["SettingsActivity.kt"] --> Prefs
+Settings --> Hosted
 Settings --> Kb
 ```
 
@@ -424,6 +491,7 @@ Settings --> Kb
 - [ScreenCapture.kt:14-34](file://app/src/main/java/com/jev/probe/capture/ocr/ScreenCapture.kt#L14-L34)
 - [MlKitOcr.kt:13-25](file://app/src/main/java/com/jev/probe/capture/ocr/MlKitOcr.kt#L13-L25)
 - [Prefs.kt:6-16](file://app/src/main/java/com/jev/probe/core/Prefs.kt#L6-L16)
+- [HostedPolicy.kt:7-18](file://app/src/main/java/com/jev/probe/core/HostedPolicy.kt#L7-L18)
 - [KbStore.kt:12-23](file://app/src/main/java/com/jev/probe/core/kb/KbStore.kt#L12-L23)
 - [JevClient.kt:9-18](file://app/src/main/java/com/jev/probe/jev/JevClient.kt#L9-L18)
 - [VisionClient.kt:10-25](file://app/src/main/java/com/jev/probe/jev/VisionClient.kt#L10-L25)
@@ -441,8 +509,7 @@ From a security-performance perspective, the app avoids unnecessary network expo
 - **Screenshot throttling prevents abuse**: Repeated content-changed events cannot turn the app into a screenshot machine gun.
 - **Bundled OCR model avoids runtime downloads**: The first use loads the model once; warm-up is triggered off the main thread.
 - **Minimal logging of sensitive data**: Logs record counts, lengths, and exception class names rather than chat content.
-
-[No sources needed since this section provides general guidance]
+- **Gateway routing optimization**: Hosted mode uses efficient gateway forwarding with hashed identifiers to minimize data exposure.
 
 ## Troubleshooting Guide
 Common security-related issues and their handling:
@@ -451,13 +518,14 @@ Common security-related issues and their handling:
 - **Overlay interference**: The overlay is hidden during capture and restored afterward to prevent capturing the panel itself.
 - **Input write failure**: If the target input changes or cannot be reliably filled, the app copies the generated reply to the clipboard instead of risking a wrong write.
 - **Data deletion verification**: The settings UI confirms what will be deleted and performs a recursive delete of the knowledge base directory.
+- **Hosted mode access denied**: Subscription builds reject BYOK keys; ensure proper hosted token registration and consent.
+- **BYOK key removal**: Legacy keys are automatically wiped in hosted-only builds during initialization.
 
 **Section sources**
 - [ScreenCapture.kt:208-218](file://app/src/main/java/com/jev/probe/capture/ocr/ScreenCapture.kt#L208-L218)
 - [ChatCaptureService.kt:732-763](file://app/src/main/java/com/jev/probe/capture/ChatCaptureService.kt#L732-L763)
 - [SettingsActivity.kt:341-357](file://app/src/main/java/com/jev/probe/SettingsActivity.kt#L341-L357)
+- [Prefs.kt:76-81](file://app/src/main/java/com/jev/probe/core/Prefs.kt#L76-L81)
 
 ## Conclusion
-The app implements a privacy-first design by keeping OCR local, storing secrets and user data in app-private storage, enforcing controlled access through whitelists and manual actions, and clearly separating local processing from external AI provider calls. Users retain strong control over data retention, provider selection, and data deletion. The accessibility and overlay permissions are necessary for functionality but are bounded by explicit user consent, sandbox isolation, and careful error handling. Third-party provider privacy policies remain the user’s responsibility to review, especially when selecting endpoints or enabling hosted mode.
-
-[No sources needed since this section summarizes without analyzing specific files]
+The app implements a privacy-first design by keeping OCR local, storing secrets and user data in app-private storage, enforcing controlled access through whitelists and manual actions, and clearly separating local processing from external AI provider calls. The dual operational model provides flexibility: BYOK mode offers complete user control over endpoints with no operator involvement, while hosted mode provides convenience through operator-managed infrastructure with explicit consent and detailed data handling practices. Users retain strong control over data retention, provider selection, and data deletion. The accessibility and overlay permissions are necessary for functionality but are bounded by explicit user consent, sandbox isolation, and careful error handling. Third-party provider privacy policies remain the user's responsibility to review, especially when selecting endpoints or enabling hosted mode. The HostedPolicy enforcement ensures subscription builds maintain security boundaries by preventing BYOK bypass and requiring proper hosted authentication.

@@ -3,6 +3,7 @@
 <cite>
 **Referenced Files in This Document**
 - [Prefs.kt](file://app/src/main/java/com/jev/probe/core/Prefs.kt)
+- [HostedPolicy.kt](file://app/src/main/java/com/jev/probe/core/HostedPolicy.kt)
 - [SettingsActivity.kt](file://app/src/main/java/com/jev/probe/SettingsActivity.kt)
 - [MainActivity.kt](file://app/src/main/java/com/jev/probe/MainActivity.kt)
 - [EntitlementRepo.kt](file://app/src/main/java/com/jev/probe/billing/EntitlementRepo.kt)
@@ -11,6 +12,14 @@
 - [build.gradle.kts](file://build.gradle.kts)
 - [gradle.properties](file://gradle.properties)
 </cite>
+
+## Update Summary
+**Changes Made**
+- Added comprehensive documentation for cloud-related preferences (cloudEnabled, cloudToken, cloudConsent, cloudEntitlementJson)
+- Documented automatic cleanup of legacy BYOK keys in subscription builds
+- Updated hosted mode architecture with HostedPolicy abstraction
+- Enhanced subscription build configuration details
+- Added new preference schema entries for cloud functionality
 
 ## Table of Contents
 1. [Introduction](#introduction)
@@ -24,14 +33,17 @@
 9. [Conclusion](#conclusion)
 
 ## Introduction
-This document explains the configuration management sub-component that centralizes application settings for API endpoints, authentication keys, model selections, and feature toggles. The primary implementation is the `Prefs` class, which provides typed accessors backed by Android’s private `SharedPreferences`. It also covers build-time configuration through Gradle files, including signing properties, build variants, environment-specific gateway URLs, and runtime validation mechanisms used by the Settings UI and core clients.
+This document explains the configuration management sub-component that centralizes application settings for API endpoints, authentication keys, model selections, and feature toggles. The primary implementation is the `Prefs` class, which provides typed accessors backed by Android's private `SharedPreferences`. It also covers build-time configuration through Gradle files, including signing properties, build variants, environment-specific gateway URLs, and runtime validation mechanisms used by the Settings UI and core clients.
 
 The goal is to make it clear how configuration flows from user input into secure storage, how defaults and migrations work, how hosted/cloud mode changes routing behavior, and how the UI validates and tests configuration before saving or using it.
+
+**Updated** Added comprehensive support for subscription-based hosted mode with automatic BYOK key cleanup and enhanced cloud preference management.
 
 ## Project Structure
 Configuration-related code lives primarily under the app module:
 
 - Core configuration store: `com.jev.probe.core.Prefs`
+- Hosted mode policy logic: `com.jev.probe.core.HostedPolicy`
 - Configuration UI and test buttons: `com.jev.probe.SettingsActivity`
 - Runtime readiness checks: `com.jev.probe.MainActivity`
 - Hosted-mode entitlements and token handling: `com.jev.probe.billing.EntitlementRepo`
@@ -43,6 +55,7 @@ Configuration-related code lives primarily under the app module:
 ```mermaid
 graph TB
 Prefs["Prefs<br/>Centralized configuration"]
+HostedPolicy["HostedPolicy<br/>Subscription mode logic"]
 Settings["SettingsActivity<br/>UI binding + validation"]
 Main["MainActivity<br/>Readiness gate"]
 Billing["EntitlementRepo<br/>Hosted token & entitlements"]
@@ -54,13 +67,15 @@ Settings --> Prefs
 Main --> Prefs
 Billing --> Prefs
 Vision --> Prefs
+Prefs --> HostedPolicy
 Prefs --> GradleApp
 GradleApp --> GradleTop
 GradleApp --> GradleProps
 ```
 
 **Diagram sources**
-- [Prefs.kt:14-400](file://app/src/main/java/com/jev/probe/core/Prefs.kt#L14-L400)
+- [Prefs.kt:14-421](file://app/src/main/java/com/jev/probe/core/Prefs.kt#L14-L421)
+- [HostedPolicy.kt:7-18](file://app/src/main/java/com/jev/probe/core/HostedPolicy.kt#L7-L18)
 - [SettingsActivity.kt:35-447](file://app/src/main/java/com/jev/probe/SettingsActivity.kt#L35-L447)
 - [MainActivity.kt:76-167](file://app/src/main/java/com/jev/probe/MainActivity.kt#L76-L167)
 - [EntitlementRepo.kt:79-103](file://app/src/main/java/com/jev/probe/billing/EntitlementRepo.kt#L79-L103)
@@ -68,10 +83,11 @@ GradleApp --> GradleProps
 - [app/build.gradle.kts:9-62](file://app/build.gradle.kts#L9-L62)
 
 **Section sources**
-- [Prefs.kt:1-400](file://app/src/main/java/com/jev/probe/core/Prefs.kt#L1-L400)
+- [Prefs.kt:1-421](file://app/src/main/java/com/jev/probe/core/Prefs.kt#L1-L421)
+- [HostedPolicy.kt:1-19](file://app/src/main/java/com/jev/probe/core/HostedPolicy.kt#L1-L19)
 - [SettingsActivity.kt:1-682](file://app/src/main/java/com/jev/probe/SettingsActivity.kt#L1-L682)
 - [MainActivity.kt:76-167](file://app/src/main/java/com/jev/probe/MainActivity.kt#L76-L167)
-- [app/build.gradle.kts:1-96](file://app/build.gradle.kts#L1-L96)
+- [app/build.gradle.kts:1-105](file://app/build.gradle.kts#L1-L105)
 
 ## Core Components
 The configuration subsystem centers on `Prefs`, with supporting roles in the UI and build system:
@@ -79,14 +95,17 @@ The configuration subsystem centers on `Prefs`, with supporting roles in the UI 
 | Area | Responsibility | Key Implementation Details |
 | --- | --- | --- |
 | Central store | Provides typed getters/setters for judge, reply, vision, OCR, context, overlay, whitelist, relationship, and hosted-mode fields | Uses `SharedPreferences` with `MODE_PRIVATE`; trims string values; coerces numeric ranges where needed |
+| Hosted mode policy | Encapsulates subscription build logic and access control decisions | Pure functions for cloud activation, gateway routing, and access determination |
 | Endpoint resolution | Computes final POST URLs per provider and hosted mode | Separate base URLs for judge, reply, and vision; hosted mode overrides endpoints |
-| Access control | Determines whether analysis can run | Requires either an active hosted session or a non-blank judge key |
+| Access control | Determines whether analysis can run | Requires either an active hosted session or a non-blank judge key (open-source builds only) |
 | Migration | Migrates legacy keys and corrects early auto-seeded defaults | Runs once per install via flags stored in preferences |
+| BYOK cleanup | Automatically removes legacy Bring-Your-Own-Key secrets in subscription builds | Clears judge, reply, vision, and legacy keys on first launch |
 | UI binding | Reads current values, fills inputs, and saves validated values | Provider pills, preset URL/model mapping, scratch `Prefs` for live testing |
-| Build-time config | Injects cloud gateway URL and defines signing behavior | `BuildConfig.CLOUD_BASE_URL` from Gradle property; optional release keystore file |
+| Build-time config | Injects cloud gateway URL and defines signing behavior | `BuildConfig.CLOUD_BASE_URL` and `BuildConfig.HOSTED_ONLY` from Gradle property; optional release keystore file |
 
 **Section sources**
-- [Prefs.kt:14-400](file://app/src/main/java/com/jev/probe/core/Prefs.kt#L14-L400)
+- [Prefs.kt:14-421](file://app/src/main/java/com/jev/probe/core/Prefs.kt#L14-L421)
+- [HostedPolicy.kt:7-18](file://app/src/main/java/com/jev/probe/core/HostedPolicy.kt#L7-L18)
 - [SettingsActivity.kt:72-447](file://app/src/main/java/com/jev/probe/SettingsActivity.kt#L72-L447)
 - [app/build.gradle.kts:21-62](file://app/build.gradle.kts#L21-L62)
 
@@ -94,14 +113,16 @@ The configuration subsystem centers on `Prefs`, with supporting roles in the UI 
 The configuration architecture separates three concerns:
 
 1. **Storage and schema**: `Prefs` owns all preference keys, default values, migration logic, and endpoint computation.
-2. **User interaction and validation**: `SettingsActivity` binds UI controls to `Prefs`, performs preflight checks, and uses scratch configurations for safe testing.
-3. **Runtime consumption**: Other components read `Prefs` to determine endpoints, credentials, and feature availability.
+2. **Hosted mode policy**: `HostedPolicy` encapsulates subscription build logic as pure functions for testing.
+3. **User interaction and validation**: `SettingsActivity` binds UI controls to `Prefs`, performs preflight checks, and uses scratch configurations for safe testing.
+4. **Runtime consumption**: Other components read `Prefs` to determine endpoints, credentials, and feature availability.
 
 ```mermaid
 sequenceDiagram
 participant User as "User"
 participant Settings as "SettingsActivity"
 participant Prefs as "Prefs"
+participant Policy as "HostedPolicy"
 participant Judge as "JudgeClient"
 participant Reply as "ReplyClient"
 participant Vision as "VisionClient"
@@ -115,9 +136,10 @@ Settings->>Prefs : Write visionBase/url/key/model
 Note over Settings,Prefs : Scratch Prefs instances are used for tests only
 User->>Main : Start analysis
 Main->>Prefs : hasAccess()
+Prefs->>Policy : hasAccess(hostedOnly, cloudActive(), judgeKey)
 alt Cloud active
 Prefs-->>Main : true
-else Own key present
+else Own key present (open-source only)
 Prefs-->>Main : true
 else Missing
 Prefs-->>Main : false
@@ -132,6 +154,7 @@ Main->>Vision : Use visionEndpoint() and effectiveVisionKey()
 - [SettingsActivity.kt:403-447](file://app/src/main/java/com/jev/probe/SettingsActivity.kt#L403-L447)
 - [MainActivity.kt:76-167](file://app/src/main/java/com/jev/probe/MainActivity.kt#L76-L167)
 - [Prefs.kt:254-316](file://app/src/main/java/com/jev/probe/core/Prefs.kt#L254-L316)
+- [HostedPolicy.kt:16-17](file://app/src/main/java/com/jev/probe/core/HostedPolicy.kt#L16-L17)
 
 ## Detailed Component Analysis
 
@@ -143,6 +166,7 @@ Main->>Vision : Use visionEndpoint() and effectiveVisionKey()
 - **Vision API configuration**: base URL, key, and model.
 - **Feature toggles**: context recording, OCR engine selection, fallback behavior, auto-analyze, overlay opacity, bubble position, relationship description, conversation whitelist, and master enabled flag.
 - **Hosted/cloud mode**: gateway base URL, token, consent, entitlement JSON, pending order, device fallback ID, and route key resolution.
+- **BYOK cleanup**: automatic removal of legacy keys in subscription builds.
 
 #### Preference Schema
 The following table summarizes the main preference groups and their semantics:
@@ -158,19 +182,22 @@ The following table summarizes the main preference groups and their semantics:
 | Conversation | `relationship`, `whitelist`, `autoAnalyze`, `enabled` | Relationship text defaults to Chinese prompt; whitelist empty means all conversations | Whitelist matches titles |
 | Hosted | `cloudEnabled`, `cloudToken`, `cloudConsent`, `cloudEntitlementJson`, `cloudPendingOrder`, `cloudDeviceFallback` | Disabled unless configured at build time and activated by user | Gateway URL comes from `BuildConfig.CLOUD_BASE_URL` |
 
+**Updated** Added comprehensive cloud preference fields including consent tracking, entitlement management, and device fallback identification.
+
 **Section sources**
 - [Prefs.kt:71-316](file://app/src/main/java/com/jev/probe/core/Prefs.kt#L71-L316)
-- [Prefs.kt:318-400](file://app/src/main/java/com/jev/probe/core/Prefs.kt#L318-L400)
+- [Prefs.kt:318-421](file://app/src/main/java/com/jev/probe/core/Prefs.kt#L318-L421)
 
 #### Validation and Readiness Logic
 Validation is split between UI-side preflight checks and runtime readiness gates:
 
-- `hasKey()` requires a non-blank judge key.
-- `hasAccess()` allows operation when either hosted mode is active or a judge key exists.
+- `hasKey()` requires a non-blank judge key and is disabled in subscription builds.
+- `hasAccess()` allows operation when either hosted mode is active or a judge key exists (open-source builds only).
 - Effective key helpers resolve fallback chains:
   - `effectiveReplyKey()` returns reply key if set, otherwise judge key.
   - `effectiveVisionKey()` returns vision key if set, otherwise reply/judge chain.
 - Endpoint builders compute final URLs based on provider and hosted mode.
+- Route key resolution prioritizes cloud token over user keys when gateway routing is active.
 
 ```mermaid
 flowchart TD
@@ -187,17 +214,22 @@ Block --> End
 **Diagram sources**
 - [Prefs.kt:254-316](file://app/src/main/java/com/jev/probe/core/Prefs.kt#L254-L316)
 - [MainActivity.kt:76-167](file://app/src/main/java/com/jev/probe/MainActivity.kt#L76-L167)
+- [HostedPolicy.kt:16-17](file://app/src/main/java/com/jev/probe/core/HostedPolicy.kt#L16-L17)
 
 **Section sources**
 - [Prefs.kt:254-316](file://app/src/main/java/com/jev/probe/core/Prefs.kt#L254-L316)
 - [MainActivity.kt:76-167](file://app/src/main/java/com/jev/probe/MainActivity.kt#L76-L167)
+- [HostedPolicy.kt:16-17](file://app/src/main/java/com/jev/probe/core/HostedPolicy.kt#L16-L17)
 
 #### Migration Support
 Migration occurs during initialization of the real configuration instance:
 
 - A v1.2-to-v1.3 migration copies the legacy `openrouter_key` into the new `judge_key` if the current judge key is blank.
 - A v1.4.1 correction removes an earlier auto-seeded Bocha Jev default when no real user choice exists.
+- **New**: Automatic cleanup of legacy BYOK keys in subscription builds removes judge, reply, vision, and legacy keys on first launch.
 - Migration flags ensure these operations run exactly once.
+
+**Updated** Added BYOK key cleanup functionality that automatically removes legacy bring-your-own-key secrets in subscription builds to reduce security exposure.
 
 ```mermaid
 flowchart TD
@@ -209,26 +241,33 @@ FlagCheck --> |Yes| Unseed["unseedBochaDefaultIfUnconfigured()"]
 FlagCheck --> |No| CopyLegacy["Copy legacy openrouter_key to judge_key"]
 CopyLegacy --> SetFlag["Set migration flag"]
 SetFlag --> Unseed
-Unseed --> Done(["Migration complete"])
+Unseed --> ByokCheck{"Subscription build?"}
+ByokCheck --> |Yes| WipeKeys["wipeByokIfHostedOnly()"]
+ByokCheck --> |No| Done(["Migration complete"])
+WipeKeys --> Done
 ```
 
 **Diagram sources**
-- [Prefs.kt:23-69](file://app/src/main/java/com/jev/probe/core/Prefs.kt#L23-L69)
+- [Prefs.kt:23-81](file://app/src/main/java/com/jev/probe/core/Prefs.kt#L23-L81)
 
 **Section sources**
-- [Prefs.kt:23-69](file://app/src/main/java/com/jev/probe/core/Prefs.kt#L23-L69)
+- [Prefs.kt:23-81](file://app/src/main/java/com/jev/probe/core/Prefs.kt#L23-L81)
 
 #### Secure Storage of Sensitive Data
 Sensitive data such as API keys and tokens are handled with explicit security considerations:
 
 - Stored in app-private `SharedPreferences`, not world-readable.
 - Keys are never logged; only key lengths are logged for diagnostics.
-- Keys are trimmed but not encrypted at rest; they remain local to the app’s private storage.
+- Keys are trimmed but not encrypted at rest; they remain local to the app's private storage.
 - Hosted token is treated like an API key and follows the same logging policy.
+- **Enhanced**: Subscription builds automatically remove legacy BYOK keys to minimize security surface area.
+
+**Updated** Added automatic cleanup of legacy BYOK keys in subscription builds to reduce security exposure while maintaining backward compatibility for open-source builds.
 
 **Section sources**
 - [Prefs.kt:6-16](file://app/src/main/java/com/jev/probe/core/Prefs.kt#L6-L16)
 - [Prefs.kt:228-231](file://app/src/main/java/com/jev/probe/core/Prefs.kt#L228-L231)
+- [Prefs.kt:76-81](file://app/src/main/java/com/jev/probe/core/Prefs.kt#L76-L81)
 
 #### Default Configuration Values
 Defaults are defined in the companion object and used by both `Prefs` and the UI:
@@ -241,10 +280,10 @@ Defaults are defined in the companion object and used by both `Prefs` and the UI
 These defaults ensure the app works out-of-the-box while allowing full customization.
 
 **Section sources**
-- [Prefs.kt:368-399](file://app/src/main/java/com/jev/probe/core/Prefs.kt#L368-L399)
+- [Prefs.kt:387-419](file://app/src/main/java/com/jev/probe/core/Prefs.kt#L387-L419)
 
 #### Backup and Restore
-The current implementation does not expose explicit backup or restore APIs for preferences. Preferences are persisted in Android’s private `SharedPreferences`, which means:
+The current implementation does not expose explicit backup or restore APIs for preferences. Preferences are persisted in Android's private `SharedPreferences`, which means:
 
 - They survive app restarts.
 - They are tied to the installed app instance.
@@ -252,6 +291,24 @@ The current implementation does not expose explicit backup or restore APIs for p
 - Users should rely on Android system backups or manual device migration if needed.
 
 [No sources needed since this section summarizes behavior without analyzing specific files]
+
+### HostedPolicy: Subscription Mode Abstraction
+`HostedPolicy` encapsulates the subscription build logic as pure functions, making it testable and independent of Android dependencies.
+
+#### Core Policy Functions
+- `cloudActive()`: Determines if hosted mode is active based on build type, user consent, gateway availability, and token presence.
+- `gatewayRoute()`: Controls whether requests should be routed through the official gateway instead of user providers.
+- `hasAccess()`: Validates whether analysis can proceed based on hosted mode status and available credentials.
+
+#### Subscription Build Security Model
+In subscription builds (`HOSTED_ONLY = true`):
+- User-provided keys are never accepted for analysis
+- All traffic routes through the official gateway
+- Legacy BYOK keys are automatically cleaned up
+- Only hosted tokens grant access
+
+**Section sources**
+- [HostedPolicy.kt:7-18](file://app/src/main/java/com/jev/probe/core/HostedPolicy.kt#L7-L18)
 
 ### SettingsActivity: Configuration UI Binding and Real-Time Validation
 `SettingsActivity` provides the user-facing configuration interface. It binds UI elements to `Prefs`, supports provider presets, and offers live test buttons for each API route.
@@ -305,19 +362,24 @@ Gradle configuration controls signing, build variants, and environment-specific 
 Release signing reads an external properties file containing keystore path, password, alias, and key password. The keystore path can be overridden via an environment variable. Without the file, release builds remain unsigned.
 
 #### Build Variants and Environment-Specific Settings
-- `CLOUD_BASE_URL` is injected into `BuildConfig` from a Gradle project property.
+- `CLOUD_BASE_URL` is injected into `BuildConfig` from a Gradle project property or `.env` file.
+- `HOSTED_ONLY` boolean flag enables subscription build mode when a valid HTTPS gateway URL is provided.
 - If blank, hosted/paywall features are hidden, keeping the open-source build behavior unchanged.
 - NDK ABI filtering keeps only `arm64-v8a` to reduce native library size.
 - Packaging disables legacy `.so` packaging for Android 15+ compatibility.
+
+**Updated** Enhanced build configuration now includes subscription build detection and automatic HOSTED_ONLY flag generation based on gateway URL validity.
 
 ```mermaid
 flowchart TD
 Gradle["Gradle build"] --> Props["gradle.properties<br/>JVM args + AndroidX + Kotlin style"]
 Gradle --> AppBuild["app/build.gradle.kts<br/>Android config"]
+AppBuild --> DotEnv[".env file<br/>JEV_CLOUD_BASE"]
 AppBuild --> Signing["Signing config<br/>External keystore props"]
-AppBuild --> BuildConfig["BuildConfig.CLOUD_BASE_URL"]
+AppBuild --> BuildConfig["BuildConfig.CLOUD_BASE_URL<br/>BuildConfig.HOSTED_ONLY"]
 AppBuild --> NDK["ABI filters<br/>arm64-v8a"]
 AppBuild --> Packaging["JNI packaging<br/>non-legacy .so"]
+DotEnv --> BuildConfig
 ```
 
 **Diagram sources**
@@ -337,6 +399,7 @@ Validation occurs at multiple layers:
 3. **Endpoint normalization**: Base URLs are trimmed and normalized before constructing final endpoints.
 4. **UI preflight checks**: Test buttons validate required fields before calling clients.
 5. **Runtime readiness checks**: `hasKey()` and `hasAccess()` gate analysis execution.
+6. **Subscription build enforcement**: Hosted mode policies prevent BYOK usage in subscription builds.
 
 ```mermaid
 flowchart TD
@@ -345,7 +408,10 @@ Normalize --> Fallback["Apply key fallback chain"]
 Fallback --> Range["Coerce numeric ranges"]
 Range --> UIValidate["UI preflight validation"]
 UIValidate --> RuntimeGate["hasAccess() check"]
-RuntimeGate --> Endpoint["Compute endpoint"]
+RuntimeGate --> SubscriptionCheck{"Subscription build?"}
+SubscriptionCheck --> |Yes| EnforceGateway["Enforce gateway-only routing"]
+SubscriptionCheck --> |No| Endpoint["Compute endpoint"]
+EnforceGateway --> Endpoint
 Endpoint --> Call["Make API call"]
 ```
 
@@ -353,11 +419,13 @@ Endpoint --> Call["Make API call"]
 - [Prefs.kt:196-204](file://app/src/main/java/com/jev/probe/core/Prefs.kt#L196-L204)
 - [Prefs.kt:275-316](file://app/src/main/java/com/jev/probe/core/Prefs.kt#L275-L316)
 - [SettingsActivity.kt:158-307](file://app/src/main/java/com/jev/probe/SettingsActivity.kt#L158-L307)
+- [HostedPolicy.kt:12-17](file://app/src/main/java/com/jev/probe/core/HostedPolicy.kt#L12-L17)
 
 **Section sources**
 - [Prefs.kt:196-204](file://app/src/main/java/com/jev/probe/core/Prefs.kt#L196-L204)
 - [Prefs.kt:275-316](file://app/src/main/java/com/jev/probe/core/Prefs.kt#L275-L316)
 - [SettingsActivity.kt:158-307](file://app/src/main/java/com/jev/probe/SettingsActivity.kt#L158-L307)
+- [HostedPolicy.kt:12-17](file://app/src/main/java/com/jev/probe/core/HostedPolicy.kt#L12-L17)
 
 ### Hosted Mode and Cloud Configuration
 Hosted mode changes how endpoints and credentials are resolved:
@@ -366,6 +434,7 @@ Hosted mode changes how endpoints and credentials are resolved:
 - The cloud token replaces user keys for authenticated calls.
 - Metering headers are added only for hosted calls.
 - Entitlement registration and refresh manage the token and subscription state.
+- **Enhanced**: Subscription builds automatically enforce gateway routing and clean up legacy BYOK keys.
 
 ```mermaid
 classDiagram
@@ -382,21 +451,31 @@ class Prefs {
 +string judgeRouteKey()
 +string replyRouteKey()
 +Map~String,String~ cloudHeaders(analysisId)
++boolean hasKey()
++boolean hasAccess()
+}
+class HostedPolicy {
++boolean cloudActive(hostedOnly, enabled, available, token)
++boolean gatewayRoute(hostedOnly, cloudActive)
++boolean hasAccess(hostedOnly, cloudActive, ownJudgeKey)
 }
 class EntitlementRepo {
 +register(ctx, prefs) Entitlement
 +refresh(ctx, prefs) Entitlement
 +fetch(prefs) Entitlement
 }
+Prefs --> HostedPolicy : "uses policy functions"
 Prefs <.. EntitlementRepo : "stores token & entitlement"
 ```
 
 **Diagram sources**
-- [Prefs.kt:216-271](file://app/src/main/java/com/jev/probe/core/Prefs.kt#L216-L271)
+- [Prefs.kt:216-316](file://app/src/main/java/com/jev/probe/core/Prefs.kt#L216-L316)
+- [HostedPolicy.kt:7-18](file://app/src/main/java/com/jev/probe/core/HostedPolicy.kt#L7-L18)
 - [EntitlementRepo.kt:79-103](file://app/src/main/java/com/jev/probe/billing/EntitlementRepo.kt#L79-L103)
 
 **Section sources**
-- [Prefs.kt:216-271](file://app/src/main/java/com/jev/probe/core/Prefs.kt#L216-L271)
+- [Prefs.kt:216-316](file://app/src/main/java/com/jev/probe/core/Prefs.kt#L216-L316)
+- [HostedPolicy.kt:7-18](file://app/src/main/java/com/jev/probe/core/HostedPolicy.kt#L7-L18)
 - [EntitlementRepo.kt:79-103](file://app/src/main/java/com/jev/probe/billing/EntitlementRepo.kt#L79-L103)
 
 ## Dependency Analysis
@@ -406,7 +485,8 @@ Configuration dependencies form a clear hierarchy:
 - `MainActivity` depends on `Prefs` for readiness checks.
 - `EntitlementRepo` depends on `Prefs` for cloud base URL and token storage.
 - `VisionClient` depends on `Prefs` for effective vision key resolution.
-- `Prefs` depends on `BuildConfig.CLOUD_BASE_URL` for hosted mode.
+- `Prefs` depends on `HostedPolicy` for subscription build logic.
+- `Prefs` depends on `BuildConfig.CLOUD_BASE_URL` and `BuildConfig.HOSTED_ONLY` for hosted mode.
 
 ```mermaid
 graph LR
@@ -414,7 +494,8 @@ Settings["SettingsActivity"] --> Prefs["Prefs"]
 Main["MainActivity"] --> Prefs
 Billing["EntitlementRepo"] --> Prefs
 Vision["VisionClient"] --> Prefs
-Prefs --> BuildConfig["BuildConfig.CLOUD_BASE_URL"]
+Prefs --> HostedPolicy["HostedPolicy"]
+Prefs --> BuildConfig["BuildConfig.CLOUD_BASE_URL<br/>BuildConfig.HOSTED_ONLY"]
 ```
 
 **Diagram sources**
@@ -422,14 +503,14 @@ Prefs --> BuildConfig["BuildConfig.CLOUD_BASE_URL"]
 - [MainActivity.kt:76-167](file://app/src/main/java/com/jev/probe/MainActivity.kt#L76-L167)
 - [EntitlementRepo.kt:79-103](file://app/src/main/java/com/jev/probe/billing/EntitlementRepo.kt#L79-L103)
 - [VisionClient.kt:55](file://app/src/main/java/com/jev/probe/jev/VisionClient.kt#L55)
-- [Prefs.kt:254-256](file://app/src/main/java/com/jev/probe/core/Prefs.kt#L254-L256)
+- [Prefs.kt:273-276](file://app/src/main/java/com/jev/probe/core/Prefs.kt#L273-L276)
 
 **Section sources**
 - [SettingsActivity.kt:35-54](file://app/src/main/java/com/jev/probe/SettingsActivity.kt#L35-L54)
 - [MainActivity.kt:76-167](file://app/src/main/java/com/jev/probe/MainActivity.kt#L76-L167)
 - [EntitlementRepo.kt:79-103](file://app/src/main/java/com/jev/probe/billing/EntitlementRepo.kt#L79-L103)
 - [VisionClient.kt:55](file://app/src/main/java/com/jev/probe/jev/VisionClient.kt#L55)
-- [Prefs.kt:254-256](file://app/src/main/java/com/jev/probe/core/Prefs.kt#L254-L256)
+- [Prefs.kt:273-276](file://app/src/main/java/com/jev/probe/core/Prefs.kt#L273-L276)
 
 ## Performance Considerations
 Configuration access patterns have modest performance implications:
@@ -439,12 +520,14 @@ Configuration access patterns have modest performance implications:
 - Endpoint computation is simple string concatenation and conditional branching.
 - UI test buttons run network calls on a background executor and post results to the main thread.
 - No caching layer is implemented around `Prefs`; callers read fresh values.
+- **Enhanced**: Subscription build checks are constant-time boolean operations.
 
 Recommendations:
 
 - Avoid frequent repeated reads in tight loops; cache derived values like endpoint strings when appropriate.
 - Keep preference keys minimal and stable to avoid unnecessary migration overhead.
 - Prefer nullable defaults and explicit validation rather than expensive parsing.
+- Leverage the pure function design of `HostedPolicy` for efficient policy evaluation.
 
 [No sources needed since this section provides general guidance]
 
@@ -459,13 +542,21 @@ Common configuration issues and their likely causes:
 | Custom judgment endpoint misrouted | Custom provider left with preset host or missing full URL | Provide full URL including path |
 | Hosted features hidden | `jevCloudBase` not set in Gradle | Pass `-PjevCloudBase=https://gw.example.com` |
 | Release build unsigned | Keystore properties file missing | Provide keystore properties via environment variable or default path |
+| BYOK keys removed unexpectedly | Running subscription build with legacy keys | Expected behavior; subscription builds require hosted tokens only |
+| Cloud token not working | Invalid or expired hosted token | Re-register through entitlement flow |
+| Consent dialog not appearing | `cloudConsent` already set to true | Check existing preferences or clear app data |
+
+**Updated** Added troubleshooting entries for subscription build scenarios and cloud token management.
 
 **Section sources**
 - [SettingsActivity.kt:158-307](file://app/src/main/java/com/jev/probe/SettingsActivity.kt#L158-L307)
 - [MainActivity.kt:76-167](file://app/src/main/java/com/jev/probe/MainActivity.kt#L76-L167)
 - [app/build.gradle.kts:9-32](file://app/build.gradle.kts#L9-L32)
+- [Prefs.kt:76-81](file://app/src/main/java/com/jev/probe/core/Prefs.kt#L76-L81)
 
 ## Conclusion
-The configuration management sub-component is centered on `Prefs`, which provides a robust, typed, and secure interface to application settings. It supports multiple API providers, fallback credential resolution, migration from legacy keys, and hosted-mode routing. The Settings UI binds to `Prefs`, validates inputs, and provides real-time test feedback. Gradle configuration injects environment-specific settings and manages signing. Together, these pieces form a cohesive configuration system that balances flexibility, safety, and usability.
+The configuration management sub-component is centered on `Prefs`, which provides a robust, typed, and secure interface to application settings. It supports multiple API providers, fallback credential resolution, migration from legacy keys, and hosted-mode routing. The addition of `HostedPolicy` abstracts subscription build logic into testable pure functions, while automatic BYOK key cleanup enhances security in subscription builds. The Settings UI binds to `Prefs`, validates inputs, and provides real-time test feedback. Gradle configuration injects environment-specific settings and manages signing. Together, these pieces form a cohesive configuration system that balances flexibility, safety, and usability across both open-source and subscription deployment models.
+
+**Updated** Enhanced conclusion to reflect the new subscription build capabilities, automatic security measures, and improved separation of concerns through the HostedPolicy abstraction.
 
 [No sources needed since this section summarizes without analyzing specific files]

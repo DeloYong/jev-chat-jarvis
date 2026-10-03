@@ -1,0 +1,1 @@
+Kotlin HTTP client layer that calls the Jev assistant's judge, reply, and vision API routes over a shared HttpURLConnection-based JSON transport with retry and error normalization.

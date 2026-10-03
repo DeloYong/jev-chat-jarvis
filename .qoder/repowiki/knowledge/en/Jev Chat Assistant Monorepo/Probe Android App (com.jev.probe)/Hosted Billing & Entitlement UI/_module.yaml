@@ -1,0 +1,10 @@
+schema_version: 1
+module_path: android_app/billing
+title: Hosted Billing & Entitlement UI
+scope:
+    - app/src/main/java/com/jev/probe/billing/
+    - app/src/test/java/com/jev/probe/core/HostedPolicyTest.kt
+source_files: []
+depends_on: []
+related_to:
+    - path: android_app/jev_client

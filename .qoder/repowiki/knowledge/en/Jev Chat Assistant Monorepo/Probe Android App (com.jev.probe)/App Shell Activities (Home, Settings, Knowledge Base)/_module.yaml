@@ -1,6 +1,6 @@
 schema_version: 1
 module_path: android_app/ui_shell
-title: Android App UI Shell (Home, Settings & Knowledge)
+title: App Shell Activities (Home, Settings, Knowledge Base)
 scope:
     - app/src/main/java/com/jev/probe/MainActivity.kt
     - app/src/main/java/com/jev/probe/SettingsActivity.kt
@@ -8,4 +8,4 @@ scope:
 source_files: []
 depends_on: []
 related_to:
-    - path: android_app/capture
+    - path: android_app/jev_client

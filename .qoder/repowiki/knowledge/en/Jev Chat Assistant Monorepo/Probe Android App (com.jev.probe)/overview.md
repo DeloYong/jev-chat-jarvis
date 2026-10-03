@@ -1,0 +1,1 @@
+Android application root that composes a chat-capture AccessibilityService, a floating analysis overlay, a Jev assistant HTTP client, and billing UI behind Activities backed by shared SharedPreferences.

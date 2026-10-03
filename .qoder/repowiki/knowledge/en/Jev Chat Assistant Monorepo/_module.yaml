@@ -1,6 +1,6 @@
 schema_version: 1
 module_path: ""
-title: Jev Chat Jarvis Monorepo
+title: Jev Chat Assistant Monorepo
 scope:
     - README.md
     - CLAUDE.md

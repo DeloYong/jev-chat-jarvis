@@ -4,6 +4,8 @@
 **Referenced Files in This Document**
 - [MainActivity.kt](file://app/src/main/java/com/jev/probe/MainActivity.kt)
 - [SettingsActivity.kt](file://app/src/main/java/com/jev/probe/SettingsActivity.kt)
+- [EntitlementRepo.kt](file://app/src/main/java/com/jev/probe/billing/EntitlementRepo.kt)
+- [PlanActivity.kt](file://app/src/main/java/com/jev/probe/billing/PlanActivity.kt)
 - [AndroidManifest.xml](file://app/src/main/AndroidManifest.xml)
 - [Prefs.kt](file://app/src/main/java/com/jev/probe/core/Prefs.kt)
 - [ChatCaptureService.kt](file://app/src/main/java/com/jev/probe/capture/ChatCaptureService.kt)
@@ -11,54 +13,69 @@
 - [HttpJson.kt](file://app/src/main/java/com/jev/probe/jev/HttpJson.kt)
 </cite>
 
+## Update Summary
+**Changes Made**
+- Updated MainActivity dashboard section to document the sophisticated cloud card system with subscription status, trial offers, and consent dialogs
+- Enhanced SettingsActivity configuration surface section to explain conditional API configuration rendering based on build type
+- Added new billing integration section covering entitlement management and payment flows
+- Updated architecture diagrams to include cloud service components
+- Expanded troubleshooting guide with hosted mode specific scenarios
+
 ## Table of Contents
 1. [Introduction](#introduction)
 2. [Project Structure](#project-structure)
 3. [Core Components](#core-components)
 4. [Architecture Overview](#architecture-overview)
 5. [Detailed Component Analysis](#detailed-component-analysis)
-6. [Dependency Analysis](#dependency-analysis)
-7. [Performance Considerations](#performance-considerations)
-8. [Troubleshooting Guide](#troubleshooting-guide)
-9. [Conclusion](#conclusion)
+6. [Billing Integration](#billing-integration)
+7. [Dependency Analysis](#dependency-analysis)
+8. [Performance Considerations](#performance-considerations)
+9. [Troubleshooting Guide](#troubleshooting-guide)
+10. [Conclusion](#conclusion)
 
 ## Introduction
 This document explains the main application interface that users see when they launch the app. It focuses on:
 
-- The primary entry point and its dashboard-style setup screen.
-- The initial flow from welcome text to permission guidance, hosted-mode trial, and master toggle.
+- The primary entry point and its dashboard-style setup screen with integrated cloud subscription management.
+- The initial flow from welcome text to permission guidance, hosted-mode trial enrollment, and master toggle.
 - Permission request workflows for accessibility services, overlay permissions, and OEM-specific background behavior.
 - The floating overlay dashboard showing analysis status, quick actions, and real-time indicators.
 - First-time user onboarding, progressive disclosure of advanced features, and contextual help.
 - Error handling for missing permissions, service availability, network errors, and recovery flows.
 - Best practices for UX design in complex Android permission scenarios.
 
-The goal is to make both new users and developers understand how the app guides users through setup while keeping sensitive operations safe and transparent.
+The goal is to make both new users and developers understand how the app guides users through setup while keeping sensitive operations safe and transparent, including the new cloud subscription model.
 
 ## Project Structure
 At a high level, the main interface is composed of:
 
-- A launcher activity that shows the readiness dashboard, permission checklist, hosted-mode card, and master toggle.
-- A settings screen where API keys, models, relationship context, OCR options, and appearance are configured.
+- A launcher activity that shows the readiness dashboard, permission checklist, cloud subscription card, and master toggle.
+- A settings screen where API keys, models, relationship context, OCR options, and appearance are configured (conditionally rendered based on build type).
 - An accessibility capture service that reads chat windows and drives the floating overlay.
 - An overlay controller that renders the draggable bubble and analysis panel.
 - A preferences store that holds configuration, cloud mode state, and feature flags.
+- A billing system managing subscriptions, trials, and payments.
 - Manifest declarations for permissions, activities, services, and the accessibility service.
 
 ```mermaid
 graph TB
-Launcher["MainActivity<br/>Dashboard + Setup"] --> Settings["SettingsActivity<br/>API Keys + Features"]
+Launcher["MainActivity<br/>Dashboard + Setup + Cloud Card"] --> Settings["SettingsActivity<br/>API Keys + Features<br/>(Conditional Rendering)"]
 Launcher --> Prefs["Prefs<br/>Configuration Store"]
+Launcher --> Billing["EntitlementRepo<br/>Subscription Management"]
+Launcher --> Plan["PlanActivity<br/>Payment & Plans"]
 Launcher --> Overlay["OverlayController<br/>Bubble + Panel"]
 Service["ChatCaptureService<br/>Accessibility Reader"] --> Overlay
 Service --> Prefs
 Service --> Http["HttpJson<br/>Network Layer"]
+Billing --> Http
 Overlay --> Settings
 ```
 
 **Diagram sources**
 - [MainActivity.kt:47-113](file://app/src/main/java/com/jev/probe/MainActivity.kt#L47-L113)
 - [SettingsActivity.kt:52-448](file://app/src/main/java/com/jev/probe/SettingsActivity.kt#L52-L448)
+- [EntitlementRepo.kt:50-149](file://app/src/main/java/com/jev/probe/billing/EntitlementRepo.kt#L50-L149)
+- [PlanActivity.kt:34-209](file://app/src/main/java/com/jev/probe/billing/PlanActivity.kt#L34-L209)
 - [ChatCaptureService.kt:202-237](file://app/src/main/java/com/jev/probe/capture/ChatCaptureService.kt#L202-L237)
 - [OverlayController.kt:38-87](file://app/src/main/java/com/jev/probe/overlay/OverlayController.kt#L38-L87)
 - [Prefs.kt:14-23](file://app/src/main/java/com/jev/probe/core/Prefs.kt#L14-L23)
@@ -69,12 +86,14 @@ Overlay --> Settings
 - [MainActivity.kt:26-31](file://app/src/main/java/com/jev/probe/MainActivity.kt#L26-L31)
 
 ## Core Components
-The main interface is centered around four core components:
+The main interface is centered around six core components:
 
 | Component | Responsibility | User-facing role |
 |---|---|---|
-| `MainActivity` | Builds the home dashboard, checks readiness, presents permission cards, manages hosted-mode consent, and toggles the assistant. | Primary setup and control screen. |
-| `SettingsActivity` | Manages judge/reply/vision endpoints, provider presets, model names, relationship description, whitelist, OCR options, and overlay opacity. | Advanced configuration and testing. |
+| `MainActivity` | Builds the home dashboard, checks readiness, presents permission cards, manages hosted-mode consent, subscription status, and toggles the assistant. | Primary setup and control screen with integrated subscription management. |
+| `SettingsActivity` | Manages judge/reply/vision endpoints, provider presets, model names, relationship description, whitelist, OCR options, and overlay opacity. Conditionally renders API configuration based on build type. | Advanced configuration and testing with adaptive UI. |
+| `EntitlementRepo` | Handles subscription registration, balance synchronization, order creation, and payment polling. | Backend subscription and billing management. |
+| `PlanActivity` | Displays subscription plans, current balance, and payment processing through external browser. | Subscription purchase and plan management interface. |
 | `ChatCaptureService` | Runs as an accessibility service, detects chat windows, captures messages or screenshots, runs analysis, and updates the overlay. | Background intelligence engine. |
 | `OverlayController` | Renders the floating bubble, expands into a translucent panel, shows judgment, candidate replies, errors, paywall, and menu actions. | Real-time dashboard overlay. |
 | `Prefs` | Stores all configuration, including API keys, cloud entitlements, feature flags, and UI state. | Persistent configuration backend. |
@@ -83,35 +102,48 @@ The main interface is centered around four core components:
 **Section sources**
 - [MainActivity.kt:47-113](file://app/src/main/java/com/jev/probe/MainActivity.kt#L47-L113)
 - [SettingsActivity.kt:52-448](file://app/src/main/java/com/jev/probe/SettingsActivity.kt#L52-L448)
+- [EntitlementRepo.kt:50-149](file://app/src/main/java/com/jev/probe/billing/EntitlementRepo.kt#L50-L149)
+- [PlanActivity.kt:34-209](file://app/src/main/java/com/jev/probe/billing/PlanActivity.kt#L34-L209)
 - [ChatCaptureService.kt:29-43](file://app/src/main/java/com/jev/probe/capture/ChatCaptureService.kt#L29-L43)
 - [OverlayController.kt:29-38](file://app/src/main/java/com/jev/probe/overlay/OverlayController.kt#L29-L38)
 - [Prefs.kt:6-13](file://app/src/main/java/com/jev/probe/core/Prefs.kt#L6-L13)
 - [HttpJson.kt:86-130](file://app/src/main/java/com/jev/probe/jev/HttpJson.kt#L86-L130)
 
 ## Architecture Overview
-The main interface follows a layered architecture:
+The main interface follows a layered architecture with integrated subscription management:
 
-1. **UI Layer**: `MainActivity` and `SettingsActivity` provide guided setup and configuration.
-2. **State Layer**: `Prefs` centralizes configuration and feature flags.
-3. **Runtime Layer**: `ChatCaptureService` observes system events and orchestrates capture, OCR, and analysis.
-4. **Presentation Layer**: `OverlayController` renders the floating dashboard.
-5. **Integration Layer**: `HttpJson` communicates with external AI providers or the hosted gateway.
+1. **UI Layer**: `MainActivity` and `SettingsActivity` provide guided setup and configuration with adaptive rendering.
+2. **State Layer**: `Prefs` centralizes configuration and feature flags including cloud subscription state.
+3. **Billing Layer**: `EntitlementRepo` and `PlanActivity` manage subscriptions, trials, and payments.
+4. **Runtime Layer**: `ChatCaptureService` observes system events and orchestrates capture, OCR, and analysis.
+5. **Presentation Layer**: `OverlayController` renders the floating dashboard.
+6. **Integration Layer**: `HttpJson` communicates with external AI providers or the hosted gateway.
 
 ```mermaid
 sequenceDiagram
 participant User as "User"
 participant MainActivity as "MainActivity"
 participant Settings as "SettingsActivity"
+participant Billing as "EntitlementRepo"
+participant Plan as "PlanActivity"
 participant Prefs as "Prefs"
 participant Service as "ChatCaptureService"
 participant Overlay as "OverlayController"
 participant Network as "HttpJson"
 User->>MainActivity : Launch app
 MainActivity->>Prefs : Read enabled, cloud state, access
-MainActivity->>MainActivity : Build readiness card + permission checklist
-User->>MainActivity : Tap permission card
-MainActivity->>User : Open system permission screen
-User->>Settings : Configure API keys / models
+MainActivity->>Billing : Check subscription status
+MainActivity->>MainActivity : Build readiness card + permission checklist + cloud card
+User->>MainActivity : Tap cloud card
+alt New user
+MainActivity->>User : Show consent dialog
+User->>MainActivity : Confirm consent
+MainActivity->>Billing : Register device
+Billing->>Network : Create account
+else Existing subscriber
+MainActivity->>Plan : Open subscription management
+end
+User->>Settings : Configure API keys / models (conditional)
 Settings->>Prefs : Save configuration
 User->>MainActivity : Toggle assistant on
 MainActivity->>Prefs : Update enabled flag
@@ -124,6 +156,8 @@ Service->>Overlay : Render results
 **Diagram sources**
 - [MainActivity.kt:47-113](file://app/src/main/java/com/jev/probe/MainActivity.kt#L47-L113)
 - [SettingsActivity.kt:404-448](file://app/src/main/java/com/jev/probe/SettingsActivity.kt#L404-L448)
+- [EntitlementRepo.kt:79-112](file://app/src/main/java/com/jev/probe/billing/EntitlementRepo.kt#L79-L112)
+- [PlanActivity.kt:85-127](file://app/src/main/java/com/jev/probe/billing/PlanActivity.kt#L85-L127)
 - [ChatCaptureService.kt:389-455](file://app/src/main/java/com/jev/probe/capture/ChatCaptureService.kt#L389-L455)
 - [OverlayController.kt:405-483](file://app/src/main/java/com/jev/probe/overlay/OverlayController.kt#L405-L483)
 - [HttpJson.kt:86-130](file://app/src/main/java/com/jev/probe/jev/HttpJson.kt#L86-L130)
@@ -131,12 +165,12 @@ Service->>Overlay : Render results
 ## Detailed Component Analysis
 
 ### MainActivity Dashboard and Setup Flow
-`MainActivity` is the primary entry point. It builds a scrollable dashboard containing:
+`MainActivity` is the primary entry point with enhanced cloud subscription management. It builds a scrollable dashboard containing:
 
 - App title and short explanation.
 - Readiness card showing whether accessibility, overlay, and access (own key or hosted session) are ready.
 - Privacy hint linking to the privacy policy.
-- Optional hosted-mode card for trial or subscription.
+- Sophisticated cloud subscription card displaying trial offers, subscription status, and consent dialogs.
 - Permission checklist for accessibility, overlay, and OEM-specific auto-start/power-limit settings.
 - Quick action row opening `SettingsActivity`.
 - Master toggle enabling or disabling the assistant.
@@ -147,9 +181,11 @@ Start(["App Launch"]) --> Build["Build Dashboard"]
 Build --> CheckA11y["Check Accessibility Enabled"]
 Build --> CheckOverlay["Check Overlay Permission"]
 Build --> CheckAccess["Check Own Key or Hosted Session"]
+Build --> CheckCloud["Check Cloud Availability"]
 CheckA11y --> Ready{"All Ready?"}
 CheckOverlay --> Ready
 CheckAccess --> Ready
+CheckCloud --> Ready
 Ready --> |Yes| ShowReady["Show Ready Status"]
 Ready --> |No| ShowNotReady["Show Not Ready Status"]
 ShowReady --> Permissions["Render Permission Checklist"]
@@ -157,7 +193,12 @@ ShowNotReady --> Permissions
 Permissions --> CloudCard{"Cloud Available?"}
 CloudCard --> |Yes| ShowCloud["Show Trial / Subscription Card"]
 CloudCard --> |No| Actions["Render Actions"]
-ShowCloud --> Actions
+ShowCloud --> CloudFlow{"User Interaction"}
+CloudFlow --> |New User| Consent["Show Consent Dialog"]
+CloudFlow --> |Existing User| Manage["Open Subscription Management"]
+Consent --> Enable["Enable Cloud Mode"]
+Manage --> Actions
+Enable --> Actions
 Actions --> Toggle["Render Master Toggle"]
 Toggle --> End(["Dashboard Ready"])
 ```
@@ -166,6 +207,7 @@ Toggle --> End(["Dashboard Ready"])
 - [MainActivity.kt:47-113](file://app/src/main/java/com/jev/probe/MainActivity.kt#L47-L113)
 - [MainActivity.kt:117-136](file://app/src/main/java/com/jev/probe/MainActivity.kt#L117-L136)
 - [MainActivity.kt:144-180](file://app/src/main/java/com/jev/probe/MainActivity.kt#L144-L180)
+- [MainActivity.kt:207-232](file://app/src/main/java/com/jev/probe/MainActivity.kt#L207-L232)
 
 #### Permission Request Workflow
 The permission workflow is explicit and user-guided:
@@ -173,7 +215,7 @@ The permission workflow is explicit and user-guided:
 - **Accessibility permission**: Opens system accessibility settings so the user can enable the service.
 - **Overlay permission**: Opens overlay permission management for the current package.
 - **OEM-specific settings**: Opens app details settings for Xiaomi/HyperOS auto-start and power-limit controls.
-- **Hosted-mode consent**: Before sending data to the operator’s gateway, the app asks for explicit confirmation and remembers consent per install.
+- **Hosted-mode consent**: Before sending data to the operator's gateway, the app asks for explicit confirmation and remembers consent per install.
 
 ```mermaid
 flowchart TD
@@ -191,23 +233,25 @@ Return --> Rebuild["Rebuild Readiness State"]
 - [MainActivity.kt:86-98](file://app/src/main/java/com/jev/probe/MainActivity.kt#L86-L98)
 - [MainActivity.kt:204-228](file://app/src/main/java/com/jev/probe/MainActivity.kt#L204-L228)
 
-#### Hosted Mode Onboarding
-For first-time users, the hosted-mode card offers a free trial without requiring an API key. Existing users who already have their own key see a quiet opt-in option. The flow includes:
+#### Cloud Subscription Management
+The sophisticated cloud card system provides three distinct experiences:
 
-1. User taps “Start trial” or “Enable hosted”.
-2. If consent is not remembered, an alert explains that chat text may be sent to the operator’s gateway.
-3. After consent, the app registers the device and enables hosted mode.
-4. Balance and plan state are refreshed asynchronously.
+1. **Active subscribers**: Shows current subscription status, renewal options, and ability to switch back to personal API keys.
+2. **Trial users**: Displays remaining trial attempts and upgrade prompts.
+3. **New users**: Offers free trial enrollment with detailed consent explanation.
+
+The consent flow ensures users explicitly agree before their chat data is sent to the operator's gateway, with clear explanations about data handling and privacy implications.
 
 **Section sources**
 - [MainActivity.kt:144-180](file://app/src/main/java/com/jev/probe/MainActivity.kt#L144-L180)
-- [MainActivity.kt:204-228](file://app/src/main/java/com/jev/probe/MainActivity.kt#L204-L228)
+- [MainActivity.kt:207-232](file://app/src/main/java/com/jev/probe/MainActivity.kt#L207-L232)
 - [Prefs.kt:218-258](file://app/src/main/java/com/jev/probe/core/Prefs.kt#L218-L258)
 
 ### SettingsActivity Configuration Surface
-`SettingsActivity` is the advanced configuration surface. It exposes:
+`SettingsActivity` is the advanced configuration surface with conditional rendering based on build type. It exposes:
 
-- Judge endpoint configuration with provider presets and manual URL/model editing.
+- **Conditional API Configuration**: In hosted-only builds, the entire API configuration section is hidden since users cannot configure their own endpoints.
+- **Full API Configuration**: In open-source builds, provides complete judge endpoint configuration with provider presets and manual URL/model editing.
 - Reply endpoint configuration with OpenAI-compatible base URLs and model selection.
 - Vision endpoint configuration for OCR fallback.
 - Relationship description and conversation whitelist.
@@ -227,6 +271,7 @@ class SettingsActivity {
 +testVision()
 +openPrivacy()
 +openRepo()
++buildApiSection(root)
 }
 class Prefs {
 +judgeProvider
@@ -246,6 +291,9 @@ class Prefs {
 +ocrAutoAnalyze
 +contextEnabled
 +overlayOpacity
++cloudEnabled
++cloudToken
++cloudConsent
 }
 SettingsActivity --> Prefs : "reads and saves"
 ```
@@ -341,11 +389,12 @@ class OverlayController {
 - [OverlayController.kt:433-483](file://app/src/main/java/com/jev/probe/overlay/OverlayController.kt#L433-L483)
 
 ### Conceptual Overview
-The main interface is designed around progressive disclosure:
+The main interface is designed around progressive disclosure with integrated subscription management:
 
 - New users see a simple dashboard explaining what the app does and what permissions are needed.
 - Basic setup is completed through one-tap links to system settings.
-- Advanced configuration is hidden behind the settings screen.
+- Optional cloud subscription enrollment with clear consent and privacy explanations.
+- Advanced configuration is hidden behind the settings screen (conditionally rendered).
 - Runtime behavior is shown through the floating overlay rather than forcing users into complex screens.
 - Errors are surfaced as actionable messages, not crashes.
 
@@ -354,7 +403,7 @@ flowchart TD
 FirstLaunch["First Launch"] --> Welcome["Welcome + Purpose"]
 Welcome --> Permissions["Permission Guidance"]
 Permissions --> BasicSetup["Basic Setup"]
-BasicSetup --> OptionalCloud["Optional Hosted Trial"]
+BasicSetup --> OptionalCloud["Optional Cloud Subscription"]
 OptionalCloud --> MasterToggle["Master Toggle"]
 MasterToggle --> Runtime["Floating Dashboard"]
 Runtime --> Advanced["Advanced Settings"]
@@ -362,13 +411,48 @@ Runtime --> Advanced["Advanced Settings"]
 
 [No sources needed since this diagram shows conceptual workflow, not actual code structure]
 
-## Dependency Analysis
-The main interface depends on several layers:
+## Billing Integration
 
-- `MainActivity` depends on `Prefs` for configuration and on system settings for permission navigation.
+### Entitlement Management
+The billing system provides comprehensive subscription management through `EntitlementRepo`:
+
+- **Device Registration**: Creates unique device identifiers that survive app reinstalls to prevent trial abuse.
+- **Balance Synchronization**: Regularly syncs subscription status, trial credits, and usage limits from the server.
+- **Order Management**: Handles payment order creation and status polling for Alipay and WeChat payments.
+- **Graceful Degradation**: Maintains cached entitlement data even when network calls fail.
+
+```mermaid
+flowchart TD
+Register["Device Registration"] --> Token["Receive Auth Token"]
+Token --> Entitlement["Fetch Entitlement Data"]
+Entitlement --> Cache["Cache Local Copy"]
+Cache --> Sync["Background Sync"]
+Sync --> Update["Update UI if Changed"]
+```
+
+**Diagram sources**
+- [EntitlementRepo.kt:79-112](file://app/src/main/java/com/jev/probe/billing/EntitlementRepo.kt#L79-L112)
+
+### Payment Processing
+`PlanActivity` handles the complete subscription purchase flow:
+
+- **Plan Display**: Shows current subscription status, daily usage limits, and available plans.
+- **Payment Integration**: Redirects users to external payment systems (Alipay/WeChat) without requiring payment SDKs.
+- **Order Polling**: Monitors payment completion and automatically updates subscription status.
+- **Error Handling**: Provides clear feedback for failed payments and support contact information.
+
+**Section sources**
+- [EntitlementRepo.kt:50-149](file://app/src/main/java/com/jev/probe/billing/EntitlementRepo.kt#L50-L149)
+- [PlanActivity.kt:34-209](file://app/src/main/java/com/jev/probe/billing/PlanActivity.kt#L34-L209)
+
+## Dependency Analysis
+The main interface depends on several layers with enhanced billing integration:
+
+- `MainActivity` depends on `Prefs` for configuration, `EntitlementRepo` for subscription management, and system settings for permission navigation.
 - `SettingsActivity` depends on `Prefs` for reading and writing configuration and on client classes for testing endpoints.
 - `ChatCaptureService` depends on `Prefs`, `OverlayController`, OCR components, and network clients.
 - `OverlayController` depends on `Prefs` for UI state and opens other activities via explicit class names.
+- `EntitlementRepo` depends on `HttpJson` for network communication with the billing gateway.
 - `HttpJson` provides retry logic and error classification used by higher-level clients.
 
 ```mermaid
@@ -376,11 +460,14 @@ graph LR
 MainActivity --> Prefs
 MainActivity --> SettingsActivity
 MainActivity --> OverlayController
+MainActivity --> EntitlementRepo
 SettingsActivity --> Prefs
 ChatCaptureService --> Prefs
 ChatCaptureService --> OverlayController
 ChatCaptureService --> HttpJson
 OverlayController --> SettingsActivity
+EntitlementRepo --> HttpJson
+PlanActivity --> EntitlementRepo
 ```
 
 **Diagram sources**
@@ -388,6 +475,7 @@ OverlayController --> SettingsActivity
 - [SettingsActivity.kt:52-448](file://app/src/main/java/com/jev/probe/SettingsActivity.kt#L52-L448)
 - [ChatCaptureService.kt:202-237](file://app/src/main/java/com/jev/probe/capture/ChatCaptureService.kt#L202-L237)
 - [OverlayController.kt:256-262](file://app/src/main/java/com/jev/probe/overlay/OverlayController.kt#L256-L262)
+- [EntitlementRepo.kt:82-92](file://app/src/main/java/com/jev/probe/billing/EntitlementRepo.kt#L82-L92)
 - [HttpJson.kt:86-130](file://app/src/main/java/com/jev/probe/jev/HttpJson.kt#L86-L130)
 
 **Section sources**
@@ -395,7 +483,7 @@ OverlayController --> SettingsActivity
 - [AndroidManifest.xml:17-57](file://app/src/main/AndroidManifest.xml#L17-L57)
 
 ## Performance Considerations
-The main interface avoids heavy work during setup:
+The main interface avoids heavy work during setup with enhanced billing optimization:
 
 - Dashboard building is lightweight and recomputed on resume.
 - Hosted-mode balance refresh runs on a background thread and only rebuilds if state changes.
@@ -403,6 +491,7 @@ The main interface avoids heavy work during setup:
 - The capture service debounces content changes and cancels stale analysis tasks.
 - OCR paths throttle screenshots and avoid repeated work using signatures.
 - Network requests use retries with exponential backoff and distinguish transient failures from permanent errors.
+- Billing operations are optimized with caching and background synchronization.
 
 Best practices derived from the implementation:
 
@@ -411,6 +500,7 @@ Best practices derived from the implementation:
 - Avoid blocking users on optional features.
 - Use clear status indicators instead of silent failures.
 - Preserve user progress across configuration changes.
+- Cache expensive operations like subscription data.
 
 [No sources needed since this section provides general guidance]
 
@@ -498,16 +588,44 @@ Best practices derived from the implementation:
 - [MainActivity.kt:94-98](file://app/src/main/java/com/jev/probe/MainActivity.kt#L94-L98)
 - [AndroidManifest.xml:50-57](file://app/src/main/AndroidManifest.xml#L50-L57)
 
+### Cloud Subscription Issues
+**Symptoms**:
+- Cloud card shows "syncing..." indefinitely.
+- Trial credits not appearing after registration.
+- Payment completed but subscription not activated.
+
+**Recovery steps**:
+1. Check internet connection and try again.
+2. For payment issues, note the order ID and contact support.
+3. Clear app cache and restart if subscription state appears corrupted.
+4. Verify that consent was properly granted during initial setup.
+
+**Section sources**
+- [EntitlementRepo.kt:79-112](file://app/src/main/java/com/jev/probe/billing/EntitlementRepo.kt#L79-L112)
+- [PlanActivity.kt:161-181](file://app/src/main/java/com/jev/probe/billing/PlanActivity.kt#L161-L181)
+
+### Conditional Settings Not Appearing
+**Symptoms**:
+- API configuration section missing in hosted-only builds.
+- Settings screen looks different between builds.
+
+**Explanation**:
+In hosted-only builds (`BuildConfig.HOSTED_ONLY = true`), the API configuration section is intentionally hidden since users cannot configure their own endpoints. This is expected behavior for subscription-only versions.
+
+**Section sources**
+- [SettingsActivity.kt:69-70](file://app/src/main/java/com/jev/probe/SettingsActivity.kt#L69-L70)
+
 ## Conclusion
-The main application interface is a guided, dashboard-driven entry point that balances simplicity with powerful capabilities. It introduces users to the app’s purpose, walks them through required permissions, offers optional hosted-mode onboarding, and exposes advanced configuration through a dedicated settings screen. At runtime, the floating overlay provides real-time feedback, quick actions, and contextual help without overwhelming the user.
+The main application interface is a guided, dashboard-driven entry point that balances simplicity with powerful capabilities, now enhanced with sophisticated subscription management. It introduces users to the app's purpose, walks them through required permissions, offers optional hosted-mode onboarding with clear consent mechanisms, and exposes advanced configuration through a dedicated settings screen with adaptive rendering. At runtime, the floating overlay provides real-time feedback, quick actions, and contextual help without overwhelming the user.
 
 The implementation emphasizes:
 
-- Clear readiness indicators.
-- Explicit permission explanations.
-- Progressive disclosure of advanced features.
-- Safe defaults and opt-in behaviors.
-- Robust error handling and recovery paths.
-- A design that keeps the user in control of sensitive actions like sending messages.
+- Clear readiness indicators with integrated subscription status.
+- Explicit permission explanations and consent mechanisms.
+- Progressive disclosure of advanced features with conditional UI rendering.
+- Safe defaults and opt-in behaviors for both permissions and subscriptions.
+- Robust error handling and recovery paths for both technical and billing issues.
+- A design that keeps the user in control of sensitive actions like sending messages and sharing data.
+- Seamless integration of subscription management without disrupting core functionality.
 
-For future improvements, consider adding more localized strings, richer onboarding animations, and additional contextual tips inside the overlay. However, the current approach already provides a solid foundation for complex permission scenarios and sustained user engagement during setup.
+For future improvements, consider adding more localized strings, richer onboarding animations, additional contextual tips inside the overlay, and enhanced subscription analytics. However, the current approach already provides a solid foundation for complex permission scenarios, sustained user engagement during setup, and seamless subscription management.

@@ -1,0 +1,1 @@
+Top-level Android activities that present the home readiness screen, API/analysis configuration hub, and the local knowledge-base manager for notes and contacts.

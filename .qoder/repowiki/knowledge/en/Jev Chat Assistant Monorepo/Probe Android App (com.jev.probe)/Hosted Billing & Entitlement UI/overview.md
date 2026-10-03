@@ -1,0 +1,1 @@
+Android billing surface that registers devices, fetches hosted entitlements, creates Alipay/WeChat payment orders, and renders the plan page.

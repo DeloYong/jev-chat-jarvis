@@ -1,0 +1,1 @@
+Top-level monorepo that hosts the Android probe app, Python judgment/calibration tooling, and static docs site under a shared Gradle wrapper and project metadata.

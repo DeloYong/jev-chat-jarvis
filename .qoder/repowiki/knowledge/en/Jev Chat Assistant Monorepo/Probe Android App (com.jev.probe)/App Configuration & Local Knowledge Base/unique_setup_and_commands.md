@@ -1,0 +1,1 @@
+The settings screen exposes a "自检" (self-check) entry point invoking `KbSelfCheck.run(context)` which creates temporary notes/contacts in the real store and a throwaway `Prefs` instance to exercise name normalization, note keyword matching, and history de-duplication before cleaning up.

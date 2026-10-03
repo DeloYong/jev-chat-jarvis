@@ -1,0 +1,5 @@
+- Gateway I/O is centralized in the `EntitlementRepo` object; Activities never call HTTP directly.
+- Network calls are invoked from background `Thread`s and UI updates are marshalled back to the main thread via `Handler(Looper.getMainLooper()).post`.
+- Server-reported state is serialized to JSON strings and cached in `Prefs.cloudEntitlementJson`, with `fromJson`/`toJson` helpers on the data class.
+- Error handling wraps failures in `ApiException(Route.CLOUD, ...)` with explicit `retryable` flags so callers can distinguish transient vs fatal errors.
+- Build-flavored behavior is gated on `BuildConfig.DEBUG` / `BuildConfig.HOSTED_ONLY` rather than runtime feature flags.

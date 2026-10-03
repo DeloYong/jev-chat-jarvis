@@ -1,6 +1,6 @@
 schema_version: 1
 module_path: android_app
-title: Jev Chat Jarvis Android App
+title: Probe Android App (com.jev.probe)
 scope:
     - app/src/main/java/com/jev/probe/
 source_files: []

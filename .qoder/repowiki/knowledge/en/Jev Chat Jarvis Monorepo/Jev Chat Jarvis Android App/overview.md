@@ -1,1 +1,0 @@
-Android app that wires an AccessibilityService chat-capture pipeline, a floating analysis overlay, and a Jev assistant HTTP client behind a home/settings UI backed by shared SharedPreferences.

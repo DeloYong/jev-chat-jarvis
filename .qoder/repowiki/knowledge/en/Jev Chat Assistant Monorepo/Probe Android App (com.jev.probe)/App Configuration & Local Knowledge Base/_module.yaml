@@ -1,9 +1,8 @@
 schema_version: 1
 module_path: android_app/core
-title: App Configuration & Knowledge Base Core
+title: App Configuration & Local Knowledge Base
 scope:
     - app/src/main/java/com/jev/probe/core/
 source_files: []
 depends_on: []
-related_to:
-    - path: android_app/capture
+related_to: []

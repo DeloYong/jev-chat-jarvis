@@ -1,0 +1,1 @@
+Android Jetpack `AppCompatActivity` with programmatic `LinearLayout`/`TextView` UI; payments are delegated to external browsers via `Intent.ACTION_VIEW` opening Alipay/WeChat web-pay URLs (no embedded payment SDK). Network layer is the project's own `HttpJson` + `Route.CLOUD`.
